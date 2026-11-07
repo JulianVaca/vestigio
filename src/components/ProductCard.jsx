@@ -5,21 +5,17 @@ import { formatPrice } from '../data/products.js'
 import { useCart } from '../context/CartContext.jsx'
 import { useMotionPref } from '../context/MotionContext.jsx'
 import { flyToCart } from '../lib/flyToCart.js'
-import { PlusIcon, CheckIcon, TagIcon, CloseIcon } from './Icons.jsx'
+import { PlusIcon, CheckIcon, CloseIcon } from './Icons.jsx'
 
 /**
- * Tarjeta de producto con animación de "Zoom-Out a la Marquilla" al seleccionar talla.
- * - Al pulsar "Elegir talla", la cámara parte de un primer plano de la marquilla del cuello/lengüeta
- *   y hace un zoom-out suave mostrando la etiqueta tejida interactiva para elegir la talla.
+ * Tarjeta de prenda en el catálogo y estanterías.
+ * Permite inspección limpia de la pieza completa y selección rápida de talla sin distorsionar la imagen.
  */
 export default function ProductCard({ product, priority = false }) {
   const { add } = useCart()
   const { reduced } = useMotionPref()
   const [picking, setPicking] = useState(false)
   const [added, setAdded] = useState(false)
-
-  const tagX = product.tagPos?.x ?? 50
-  const tagY = product.tagPos?.y ?? 18
 
   const quickAdd = (size, e) => {
     const cardEl = e.currentTarget.closest('.card')
@@ -32,7 +28,7 @@ export default function ProductCard({ product, priority = false }) {
   }
 
   return (
-    <article className={`card ${picking ? 'card--marquilla-open' : ''}`}>
+    <article className="card">
       <div className="card__visual">
         <Link
           to={`/producto/${product.id}`}
@@ -48,80 +44,65 @@ export default function ProductCard({ product, priority = false }) {
             height="1120"
             loading={priority ? 'eager' : 'lazy'}
             decoding="async"
-            style={{
-              transformOrigin: `${tagX}% ${tagY}%`,
-            }}
           />
           <span className="card__tag">{product.category}</span>
           <span className="card__brand-pill">{product.brand}</span>
         </Link>
 
-        {/* Overlay interactivo de Marquilla tejida con animación de Zoom-Out */}
-        <AnimatePresence>
-          {picking && (
-            <motion.div
-              className="marquilla-overlay"
-              role="dialog"
-              aria-label={`Marquilla de talla para ${product.name}`}
-              initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.55, y: -18 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
-              transition={{ duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="marquilla-tag">
-                <div className="marquilla-tag__stitch" aria-hidden="true" />
-                <div className="marquilla-tag__head">
-                  <span className="marquilla-tag__brand">VESTIGIO · {product.brand}</span>
-                  <button
-                    type="button"
-                    className="marquilla-tag__close"
-                    onClick={() => setPicking(false)}
-                    aria-label="Cerrar marquilla"
-                  >
-                    <CloseIcon width={14} height={14} />
-                  </button>
-                </div>
-                <p className="marquilla-tag__title">Selecciona talla en marquilla</p>
-                <div className="marquilla-tag__sizes" role="group" aria-label="Elige una talla">
-                  {product.sizes.map((s, i) => (
-                    <motion.button
-                      key={s}
-                      type="button"
-                      className="marquilla-tag__size-btn"
-                      onClick={(e) => quickAdd(s, e)}
-                      initial={{ opacity: 0, scale: 1.25 }}
-                      animate={{ opacity: 1, scale: 1, transition: { delay: 0.08 + i * 0.035 } }}
-                      whileTap={{ scale: 0.92 }}
-                    >
-                      {s}
-                    </motion.button>
-                  ))}
-                </div>
-                <div className="marquilla-tag__stitch" aria-hidden="true" />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         <div className="card__quick">
-          {!picking && (
-            <button
-              type="button"
-              className="card__quick-btn"
-              onClick={() => setPicking(true)}
-              aria-label={`Ver marquilla y elegir talla de ${product.name}`}
-            >
-              {added ? (
-                <>
-                  <CheckIcon width={16} height={16} /> Sellado en carrito
-                </>
-              ) : (
-                <>
-                  <TagIcon width={16} height={16} /> Elegir talla · Marquilla
-                </>
-              )}
-            </button>
-          )}
+          <AnimatePresence mode="wait">
+            {picking ? (
+              <motion.div
+                key="sizes"
+                className="card__sizes"
+                role="group"
+                aria-label="Elige una talla"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.2 }}
+              >
+                {product.sizes.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    className="card__size-btn"
+                    onClick={(e) => quickAdd(s, e)}
+                  >
+                    {s}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className="card__size-close"
+                  onClick={() => setPicking(false)}
+                  aria-label="Cancelar selección de talla"
+                >
+                  <CloseIcon width={13} height={13} />
+                </button>
+              </motion.div>
+            ) : (
+              <motion.button
+                key="cta"
+                type="button"
+                className="card__quick-btn"
+                onClick={() => setPicking(true)}
+                aria-label={`Añadir ${product.name} al carrito`}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                {added ? (
+                  <>
+                    <CheckIcon width={16} height={16} /> Añadido al carrito
+                  </>
+                ) : (
+                  <>
+                    <PlusIcon width={16} height={16} /> Añadir rápida · Talla
+                  </>
+                )}
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

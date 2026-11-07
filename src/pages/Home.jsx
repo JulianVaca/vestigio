@@ -2,13 +2,14 @@ import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { products, rooms } from '../data/products.js'
 import ProductCard from '../components/ProductCard.jsx'
+import BoutiqueRack from '../components/BoutiqueRack.jsx'
 import { ArrowIcon, CubeIcon } from '../components/Icons.jsx'
 import { useScrollAnimations, loadGsap } from '../hooks/useScrollAnimations.js'
 import { useMotionPref } from '../context/MotionContext.jsx'
 
 const base = import.meta.env.BASE_URL
 const manifesto =
-  'No vendemos tendencias efímeras; custodiamos reliquias contemporáneas. En VESTIGIO dialogan el archivo de diseñador, Billionaire Boys Club, A Bathing Ape, Yeezy y los sneakers que escribieron la historia de la calle con la permanencia del granito griego y la vida botánica del Mediterráneo.'
+  'No seguimos tendencias efímeras; esculpimos prendas originales que perduran como la piedra. En VESTIGIO cada pieza nace desde cero en nuestro atelier dialogando con la arquitectura griega de travertino, el bronce cepillado y la vida botánica del Mediterráneo.'
 
 export default function Home() {
   const scope = useRef(null)
@@ -38,9 +39,9 @@ export default function Home() {
 
         gsap.fromTo(
           '.manifesto__word',
-          { color: '#6E7A73' },
+          { color: '#A39C8E' },
           {
-            color: '#F2EFE9',
+            color: '#181B19',
             stagger: 0.05,
             ease: 'none',
             scrollTrigger: { trigger: '.manifesto', start: 'top 75%', end: 'bottom 45%', scrub: true },
@@ -78,16 +79,15 @@ export default function Home() {
     }
   }, [reduced])
 
-  // Seleccionamos 8 piezas representativas de las 5 salas para la portada
   const featured = [
-    products[0], // Raf Simons Bomber
-    products[6], // BBC Astronaut Hoodie
-    products[12], // BAPE Shark Granite Camo
-    products[18], // Yeezy Dove Hoodie
-    products[24], // Air Jordan 1 1985 Relic
-    products[26], // BAPE STA Marble & Olive
-    products[27], // Yeezy 700 Wave Runner
-    products[28], // Off-White x AJ1 The Ten
+    products[0],
+    products[6],
+    products[12],
+    products[18],
+    products[24],
+    products[26],
+    products[27],
+    products[28],
   ]
   const corridorFrames = [products[0], products[6], products[12], products[18], products[24], products[27]]
 
@@ -101,7 +101,7 @@ export default function Home() {
             src={`${base}img/hero-hd.webp`}
             srcSet={`${base}img/hero-sm.webp 960w, ${base}img/hero.webp 1920w, ${base}img/hero-hd.webp 2560w`}
             sizes="100vw"
-            alt="Visitante en hoodie oversize y pantalón sastre frente a una vitrina con un torso de mármol griego y un sneaker de archivo en un pórtico de granito con olivos"
+            alt="Sala arquitectónica de VESTIGIO con columnas griegas, olivos mediterráneos y piezas originales de streetwear"
             width="2560"
             height="1440"
             fetchpriority="high"
@@ -110,7 +110,7 @@ export default function Home() {
         </div>
 
         <div className="hero__content container">
-          <p className="hero__eyebrow eyebrow">Exposición 01 · Ágora & Archivo · 30 Piezas</p>
+          <p className="hero__eyebrow eyebrow">Atelier VESTIGIO · 30 Diseños Originales · 5 Salas</p>
           <h1 id="hero-title" className="hero__title">
             <span className="hero__line">
               <span>Streetwear con</span>
@@ -122,15 +122,15 @@ export default function Home() {
             </span>
           </h1>
           <p className="hero__lead">
-            Treinta piezas curadas entre columnas de granito griego y jardines botánicos: archivo de Diseñador, Billionaire Boys
-            Club, BAPE, Yeezy y los sneakers que definieron una era.
+            Treinta prendas originales creadas desde cero en nuestro atelier y exhibidas en percheros interactivos de bronce entre
+            columnas griegas de travertino y olivos mediterráneos.
           </p>
           <div className="hero__actions">
             <Link to="/museo" className="btn btn--primary">
-              <CubeIcon width={18} height={18} /> Entrar al museo 3D
+              <CubeIcon width={18} height={18} /> Entrar a la tienda-museo 3D
             </Link>
-            <Link to="/catalogo" className="btn btn--ghost">
-              Explorar las 30 piezas <ArrowIcon width={18} height={18} />
+            <Link to="/catalogo" className="btn btn--ghost hero__ghost-btn">
+              Recorrer los racks <ArrowIcon width={18} height={18} />
             </Link>
           </div>
         </div>
@@ -146,7 +146,7 @@ export default function Home() {
         <div className="marquee__track">
           {Array.from({ length: 2 }).map((_, k) => (
             <span key={k}>
-              Ágora & Archivo · 30 Piezas Autenticadas · Diseñador · Billionaire Boys Club · A Bathing Ape · Yeezy · Sneakers de Culto · Envíos Asegurados ·&nbsp;
+              Atelier VESTIGIO · 30 Prendas Originales · Racks Interactivos de Tienda · Sastrería Ágora · Gráfica Cosmos · Camuflaje Botánico · Volumen Monolito · Calzado Pedestal ·&nbsp;
             </span>
           ))}
         </div>
@@ -154,7 +154,7 @@ export default function Home() {
 
       {/* ───────────── MANIFIESTO ───────────── */}
       <section className="manifesto container" aria-label="Manifiesto">
-        <p className="eyebrow">Manifiesto Curatorial</p>
+        <p className="eyebrow">Manifiesto del Atelier</p>
         <p className="manifesto__text">
           {manifesto.split(' ').map((w, i) => (
             <span key={i} className="manifesto__word">
@@ -164,17 +164,26 @@ export default function Home() {
         </p>
       </section>
 
+      {/* ───────────── PERCHERO INTERACTIVO EN PORTADA ───────────── */}
+      <div className="container">
+        <BoutiqueRack
+          items={featured}
+          title="Perchero de Selección · 8 Piezas Clave"
+          subtitle="Desliza las perchas como en nuestra boutique física o entra al catálogo completo para recorrer los 5 racks."
+        />
+      </div>
+
       {/* ───────────── DESTACADOS ───────────── */}
       <section className="section container" aria-labelledby="featured-title">
         <div className="section__head" data-reveal>
           <div>
             <p className="eyebrow">Selección de las 5 Salas</p>
             <h2 id="featured-title" className="h2">
-              Reliquias <em>destacadas</em>
+              Piezas <em>destacadas</em>
             </h2>
           </div>
           <Link to="/catalogo" className="link-arrow">
-            Ver las 30 piezas <ArrowIcon width={18} height={18} />
+            Ver las 30 prendas en racks <ArrowIcon width={18} height={18} />
           </Link>
         </div>
         <div className="grid grid--4" data-reveal-stagger>
@@ -201,16 +210,16 @@ export default function Home() {
           </div>
         </div>
         <div className="teaser__content container" data-reveal>
-          <p className="eyebrow">Pórtico 3D en Granito & Botánica</p>
+          <p className="eyebrow">Flagship 3D · Racks de Bronce, Travertino & Olivos</p>
           <h2 id="teaser-title" className="h2">
-            Camina por el <em>archivo</em>
+            Recorre los <em>racks en 3D</em>
           </h2>
           <p className="teaser__text">
-            Cinco salas de arquitectura griega en granito con olivos y laureles, treinta obras interactivas y esculturas en tiempo
-            real. Abre cada pieza para inspeccionar su marquilla tejida, elegir tu talla y añadirla al carrito.
+            Cinco salas luminosas en piedra travertino y granito griego donde las 30 prendas cuelgan de racks arquitectónicos de
+            bronce. Acércate a cualquier perchero, pasa de una prenda a otra y añade tu talla al carrito.
           </p>
           <Link to="/museo" className="btn btn--primary">
-            <CubeIcon width={18} height={18} /> Iniciar recorrido 3D
+            <CubeIcon width={18} height={18} /> Entrar a la tienda-museo 3D
           </Link>
         </div>
       </section>
@@ -219,7 +228,7 @@ export default function Home() {
       <section className="section container" aria-labelledby="rooms-title">
         <div className="section__head" data-reveal>
           <div>
-            <p className="eyebrow">Plano del museo · 30 obras</p>
+            <p className="eyebrow">Plano del showroom · 30 prendas originales</p>
             <h2 id="rooms-title" className="h2">
               Cinco <em>salas</em>
             </h2>
@@ -250,11 +259,11 @@ export default function Home() {
       {/* ───────────── CTA ───────────── */}
       <section className="cta container" data-reveal>
         <h2 className="h2">
-          ¿Buscas una pieza <em>específica</em>?
+          ¿Buscas asesoría de <em>talla o estilo</em>?
         </h2>
-        <p>Agenda una cita privada en nuestro showroom o solicita asesoría de tallas, autenticidad y envíos asegurados.</p>
+        <p>Agenda una cita personalizada con nuestro equipo de sastrería urbana o solicita información sobre envíos asegurados.</p>
         <Link to="/contacto" className="btn btn--ghost">
-          Contactar curaduría <ArrowIcon width={18} height={18} />
+          Contactar al atelier <ArrowIcon width={18} height={18} />
         </Link>
       </section>
     </main>

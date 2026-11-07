@@ -128,8 +128,8 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
         aria-label="Museo 3D interactivo de la colección Ágora y Archivo"
         role="img"
       >
-        <color attach="background" args={['#121514']} />
-        <fog attach="fog" args={['#121514', 18, 56]} />
+        <color attach="background" args={['#EAE4D7']} />
+        <fog attach="fog" args={['#EAE4D7', 18, 56]} />
         <Suspense fallback={null}>
           <Scene
             reduced={reduced}
@@ -167,32 +167,32 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
               animate={{ y: 0, opacity: 1, transition: { delay: 0.15, duration: 0.75, ease: [0.22, 1, 0.36, 1] } }}
               exit={{ y: -30, opacity: 0, transition: { duration: 0.45 } }}
             >
-              <p className="eyebrow">Museo VESTIGIO · Pórtico Griego & Botánica</p>
+              <p className="eyebrow">Tienda-Museo 3D · Racks de Bronce & Travertino</p>
               <h1 className="h1">
-                Ágora & <em>Archivo</em>
+                Atelier & <em>Racks</em>
               </h1>
               <p className="museum__intro-text">
-                Recorre cinco salas en granito helénico con vegetación mediterránea y 30 piezas históricas: archivo de Diseñador,
-                Billionaire Boys Club, BAPE & Base, Yeezy y Sneakers de culto.
+                Recorre cinco salas en piedra travertino y granito griego con olivos mediterráneos y 30 prendas originales colgadas
+                en racks arquitectónicos de bronce.
               </p>
               <ul className="museum__keys" aria-label="Controles">
                 <li><kbd>Arrastrar</kbd> mirar alrededor</li>
-                <li><kbd>Clic / toque</kbd> en el granito para caminar</li>
+                <li><kbd>Clic / toque</kbd> en el piso para caminar hacia un rack</li>
                 <li><kbd>W A S D</kbd> o flechas para moverte con fluidez</li>
-                <li><kbd>N</kbd> / <kbd>P</kbd> siguiente / anterior obra</li>
+                <li><kbd>N</kbd> / <kbd>P</kbd> siguiente / anterior prenda en el rack</li>
               </ul>
               <div className="museum__loader" aria-live="polite">
                 <div className="museum__loader-track">
                   <motion.div className="museum__loader-fill" animate={{ scaleX: loaded ? 1 : Math.max(0.08, progress) }} />
                 </div>
-                <span>{loaded ? '30 obras y 5 salas listas' : `Cargando pórtico y obras… ${Math.round(progress * 100)}%`}</span>
+                <span>{loaded ? '30 racks de tienda y 5 salas listas' : `Preparando racks y prendas… ${Math.round(progress * 100)}%`}</span>
               </div>
               <div className="museum__intro-actions">
                 <button className="btn btn--primary" onClick={start} disabled={!loaded}>
-                  Entrar al pórtico 3D <ArrowIcon width={18} height={18} />
+                  Entrar a la tienda 3D <ArrowIcon width={18} height={18} />
                 </button>
                 <Link to="/catalogo" className="btn btn--ghost">
-                  Explorar catálogo (30)
+                  Ver racks en catálogo (30)
                 </Link>
               </div>
             </motion.div>
@@ -326,23 +326,31 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
               <motion.div className="museum__help" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}>
                 <ul className="museum__keys">
                   <li><kbd>Arrastrar</kbd> mirar alrededor</li>
-                  <li><kbd>Clic</kbd> piso: caminar · obra: inspeccionar marquilla</li>
+                  <li><kbd>Clic</kbd> piso: caminar · rack: ver prenda y talla</li>
                   <li><kbd>WASD</kbd> / flechas: caminar libremente</li>
-                  <li><kbd>N</kbd> <kbd>P</kbd> obra siguiente / anterior (30 piezas)</li>
-                  <li><kbd>Esc</kbd> cerrar ficha</li>
+                  <li><kbd>N</kbd> <kbd>P</kbd> rack siguiente / anterior (30 prendas)</li>
+                  <li><kbd>Esc</kbd> cerrar panel</li>
                 </ul>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* ───────── Ficha de la obra con Zoom-Out a la Marquilla ───────── */}
+          {/* ───────── Panel de Rack de la prenda seleccionada ───────── */}
           <AnimatePresence>
-            {selected && <ProductPanel key={selected} id={selected} reduced={reduced} onClose={() => setSelected(null)} />}
+            {selected && (
+              <ProductPanel
+                key={selected}
+                id={selected}
+                reduced={reduced}
+                onSelectOther={(otherId) => onSelect(otherId)}
+                onClose={() => setSelected(null)}
+              />
+            )}
           </AnimatePresence>
 
           {hovered && !selected && (
             <div className="museum__hint" aria-hidden="true">
-              {getProduct(hovered)?.name} · clic para ver marquilla y talla
+              {getProduct(hovered)?.name} · clic en el rack para elegir talla
             </div>
           )}
         </>
@@ -351,27 +359,21 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
   )
 }
 
-function ProductPanel({ id, reduced, onClose }) {
+function ProductPanel({ id, reduced, onSelectOther, onClose }) {
   const p = getProduct(id)
   const { add } = useCart()
   const [size, setSize] = useState(null)
   const [state, setState] = useState('idle')
-  const [zoomTag, setZoomTag] = useState(true)
   const img = useRef(null)
 
-  const tagX = p.tagPos?.x ?? 50
-  const tagY = p.tagPos?.y ?? 18
-
-  const handleSelectSize = (s) => {
-    setSize(s)
-    // Hace zoom-out de la marquilla al elegir la talla
-    setTimeout(() => setZoomTag(false), 200)
-  }
+  const roomItems = useMemo(
+    () => exhibits.filter((e) => e.product.room === p.room).map((e) => e.product),
+    [p.room],
+  )
 
   const handleAdd = () => {
     if (!size) {
       setState('error')
-      setZoomTag(true)
       setTimeout(() => setState('idle'), 600)
       return
     }
@@ -384,31 +386,42 @@ function ProductPanel({ id, reduced, onClose }) {
   return (
     <motion.aside
       className="panel"
-      aria-label={`Ficha de ${p.name}`}
+      aria-label={`Rack de ${p.name}`}
       initial={{ x: '110%', opacity: 0.5 }}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '110%', opacity: 0.5 }}
       transition={{ type: 'spring', stiffness: 260, damping: 30 }}
     >
-      <button className="icon-btn panel__close" onClick={onClose} aria-label="Cerrar ficha">
+      <button className="icon-btn panel__close" onClick={onClose} aria-label="Cerrar panel">
         <CloseIcon />
       </button>
 
-      <div className="panel__marquilla-preview">
-        <motion.img
+      {/* Selector de perchas del rack de la sala actual */}
+      <div className="panel__rack-strip" aria-label="Otras prendas en los racks de esta sala">
+        <span className="panel__rack-label">Rack de {rooms[p.room].name.split('·')[1]?.trim()}:</span>
+        <div className="panel__rack-thumbs">
+          {roomItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`panel__rack-thumb ${item.id === p.id ? 'is-active' : ''}`}
+              onClick={() => onSelectOther(item.id)}
+              title={item.name}
+            >
+              <img src={item.img.replace('.webp', '-sm.webp')} alt={item.name} width="56" height="74" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="panel__garment-preview">
+        <img
           ref={img}
           src={p.img.replace('.webp', '-sm.webp')}
           alt={p.name}
           width="420"
           height="560"
-          style={{ transformOrigin: `${tagX}% ${tagY}%` }}
-          initial={reduced ? { scale: 1 } : { scale: 2.35 }}
-          animate={{ scale: zoomTag && !reduced ? 1.55 : 1 }}
-          transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
         />
-        <button type="button" className="panel__tag-btn" onClick={() => setZoomTag((z) => !z)}>
-          <TagIcon width={13} height={13} /> {zoomTag ? 'Zoom-out prenda' : 'Zoom marquilla'}
-        </button>
       </div>
 
       <div>
@@ -421,7 +434,7 @@ function ProductPanel({ id, reduced, onClose }) {
 
       <fieldset className={`sizes sizes--sm ${state === 'error' ? 'is-error' : ''}`}>
         <legend>
-          <TagIcon width={14} height={14} /> Marquilla de talla{' '}
+          Talla disponible{' '}
           {state === 'error' && (
             <span className="sizes__hint" role="alert">
               · Elige una talla
@@ -434,13 +447,13 @@ function ProductPanel({ id, reduced, onClose }) {
           transition={{ duration: 0.4 }}
         >
           {p.sizes.map((s) => (
-            <label key={s} className={`size ${size === s ? 'size--active' : ''}`} onClick={() => handleSelectSize(s)}>
+            <label key={s} className={`size ${size === s ? 'size--active' : ''}`} onClick={() => setSize(s)}>
               <input
                 type="radio"
                 name="panel-size"
                 value={s}
                 checked={size === s}
-                onChange={() => handleSelectSize(s)}
+                onChange={() => setSize(s)}
                 className="sr-only"
               />
               {size === s && <motion.span layoutId="panel-size-pill" className="size__pill" />}
@@ -454,16 +467,16 @@ function ProductPanel({ id, reduced, onClose }) {
         <motion.button className="btn btn--primary btn--block" onClick={handleAdd} whileTap={{ scale: 0.96 }}>
           {state === 'done' ? (
             <>
-              <CheckIcon width={18} height={18} /> Sellado en carrito
+              <CheckIcon width={18} height={18} /> Añadido al carrito
             </>
           ) : (
             <>
-              <PlusIcon width={18} height={18} /> Añadir al carrito
+              <PlusIcon width={18} height={18} /> Descolgar al carrito
             </>
           )}
         </motion.button>
         <Link to={`/producto/${p.id}`} className="btn btn--ghost btn--block">
-          Ver ficha completa y marquilla
+          Ver ficha completa de la prenda
         </Link>
       </div>
     </motion.aside>

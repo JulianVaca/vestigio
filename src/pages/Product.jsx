@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { getProduct, products, formatPrice, rooms } from '../data/products.js'
@@ -7,7 +7,7 @@ import { useMotionPref } from '../context/MotionContext.jsx'
 import { flyToCart } from '../lib/flyToCart.js'
 import ProductCard from '../components/ProductCard.jsx'
 import QtyStepper from '../components/QtyStepper.jsx'
-import { CheckIcon, CubeIcon, PlusIcon, ArrowLeftIcon, TagIcon, CloseIcon } from '../components/Icons.jsx'
+import { CheckIcon, CubeIcon, PlusIcon, ArrowLeftIcon } from '../components/Icons.jsx'
 import { useScrollAnimations } from '../hooks/useScrollAnimations.js'
 import NotFound from './NotFound.jsx'
 
@@ -27,31 +27,15 @@ function ProductView({ product }) {
   const [qty, setQty] = useState(1)
   const [state, setState] = useState('idle') // idle | error | adding | done
   const [zoom, setZoom] = useState({ active: false, x: 50, y: 50 })
-  // Al seleccionar la prenda, iniciamos con la animación de Zoom-Out desde la marquilla para elegir la talla
-  const [marquillaMode, setMarquillaMode] = useState(true)
   const [openDetail, setOpenDetail] = useState(0)
   useScrollAnimations(scope)
-
-  const tagX = product.tagPos?.x ?? 50
-  const tagY = product.tagPos?.y ?? 18
-
-  useEffect(() => {
-    setMarquillaMode(true)
-  }, [product.id])
 
   const related = products.filter((p) => p.id !== product.id && (p.room === product.room || p.category === product.category)).slice(0, 4)
   const fallback = products.filter((p) => p.id !== product.id).slice(0, 4)
 
-  const selectSizeFromMarquilla = (s) => {
-    setSize(s)
-    // Una vez elegida la talla en la marquilla, hace zoom-out suave a la prenda completa
-    setTimeout(() => setMarquillaMode(false), 260)
-  }
-
   const handleAdd = async () => {
     if (!size) {
       setState('error')
-      setMarquillaMode(true)
       setTimeout(() => setState('idle'), 700)
       return
     }
@@ -64,7 +48,6 @@ function ProductView({ product }) {
   }
 
   const onMove = (e) => {
-    if (marquillaMode) return
     const r = e.currentTarget.getBoundingClientRect()
     setZoom({ active: true, x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 })
   }
@@ -73,7 +56,7 @@ function ProductView({ product }) {
     <main id="main" ref={scope} className="page container">
       <nav className="breadcrumb" aria-label="Ruta de navegación">
         <Link to="/catalogo">
-          <ArrowLeftIcon width={16} height={16} /> Catálogo
+          <ArrowLeftIcon width={16} height={16} /> Catálogo & Racks
         </Link>
         <span aria-hidden="true">/</span>
         <Link to={`/catalogo?cat=${encodeURIComponent(product.category)}`}>{product.category}</Link>
@@ -83,7 +66,7 @@ function ProductView({ product }) {
 
       <div className="pdp">
         <div
-          className={`pdp__media ${zoom.active && !reduced && !marquillaMode ? 'is-zoom' : ''} ${marquillaMode ? 'is-marquilla' : ''}`}
+          className={`pdp__media ${zoom.active && !reduced ? 'is-zoom' : ''}`}
           onPointerMove={onMove}
           onPointerLeave={() => setZoom((z) => ({ ...z, active: false }))}
         >
@@ -94,81 +77,27 @@ function ProductView({ product }) {
             width="840"
             height="1120"
             style={{
-              transformOrigin: marquillaMode ? `${tagX}% ${tagY}%` : `${zoom.x}% ${zoom.y}%`,
+              transformOrigin: `${zoom.x}% ${zoom.y}%`,
             }}
-            initial={reduced ? { opacity: 0 } : { scale: 2.55, opacity: 0 }}
+            initial={reduced ? { opacity: 0 } : { scale: 1.04, opacity: 0 }}
             animate={
               reduced
                 ? { opacity: 1 }
                 : {
-                    scale: marquillaMode ? 1.48 : zoom.active ? 1.75 : 1,
+                    scale: zoom.active ? 1.65 : 1,
                     opacity: 1,
                   }
             }
-            transition={{ duration: 1.05, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           />
           <span className="pdp__room">{rooms[product.room].name}</span>
-
-          <button
-            type="button"
-            className="pdp__marquilla-toggle"
-            onClick={() => setMarquillaMode((m) => !m)}
-          >
-            <TagIcon width={15} height={15} />
-            {marquillaMode ? 'Ver prenda completa' : 'Zoom a la marquilla'}
-          </button>
-
-          {/* Tarjeta interactiva de Marquilla tejida con animación de Zoom-Out */}
-          <AnimatePresence>
-            {marquillaMode && (
-              <motion.div
-                className="pdp__marquilla-box"
-                initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.45, y: -24 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.86, y: 12 }}
-                transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <div className="marquilla-tag marquilla-tag--lg">
-                  <div className="marquilla-tag__stitch" aria-hidden="true" />
-                  <div className="marquilla-tag__head">
-                    <span className="marquilla-tag__brand">MARQUILLA DE ARCHIVO · {product.brand}</span>
-                    <button
-                      type="button"
-                      className="marquilla-tag__close"
-                      onClick={() => setMarquillaMode(false)}
-                      aria-label="Cerrar vista de marquilla"
-                    >
-                      <CloseIcon width={15} height={15} />
-                    </button>
-                  </div>
-                  <p className="marquilla-tag__era">{product.era}</p>
-                  <p className="marquilla-tag__title">
-                    {size ? `Talla seleccionada: ${size} · Listo para añadir` : 'Selecciona tu talla en la marquilla:'}
-                  </p>
-                  <div className="marquilla-tag__sizes" role="group" aria-label="Seleccionar talla en la marquilla">
-                    {product.sizes.map((s) => (
-                      <button
-                        key={s}
-                        type="button"
-                        className={`marquilla-tag__size-btn ${size === s ? 'is-selected' : ''}`}
-                        onClick={() => selectSizeFromMarquilla(s)}
-                      >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="marquilla-tag__stitch" aria-hidden="true" />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
 
         <div className="pdp__info">
           <motion.div
             initial="hidden"
             animate="show"
-            variants={{ show: { transition: { staggerChildren: 0.07, delayChildren: 0.2 } } }}
+            variants={{ show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } } }}
           >
             {[
               <p key="e" className="eyebrow">{product.brand} · {product.era}</p>,
@@ -195,10 +124,10 @@ function ProductView({ product }) {
 
           <fieldset className={`sizes ${state === 'error' ? 'is-error' : ''}`}>
             <legend>
-              Talla en marquilla{' '}
+              Talla disponible{' '}
               {state === 'error' && (
                 <span className="sizes__hint" role="alert">
-                  · Elige una talla en la marquilla
+                  · Selecciona una talla
                 </span>
               )}
             </legend>
@@ -211,10 +140,7 @@ function ProductView({ product }) {
                 <label
                   key={s}
                   className={`size ${size === s ? 'size--active' : ''}`}
-                  onClick={() => {
-                    setSize(s)
-                    setMarquillaMode(false)
-                  }}
+                  onClick={() => setSize(s)}
                 >
                   <input
                     type="radio"
@@ -270,13 +196,13 @@ function ProductView({ product }) {
           </div>
 
           <Link to={`/museo?obra=${product.id}`} className="pdp__museum">
-            <CubeIcon width={18} height={18} /> Exhibición en vivo: ver pieza en la {rooms[product.room].name} del Museo 3D
+            <CubeIcon width={18} height={18} /> Ver prenda colgada en el rack 3D de la {rooms[product.room].name}
           </Link>
 
           <div className="accordion">
             {[
               {
-                title: 'Especificaciones y archivo',
+                title: 'Confección y detalles del atelier',
                 body: (
                   <ul>
                     {product.details.map((d) => (
@@ -290,16 +216,16 @@ function ProductView({ product }) {
                 body: (
                   <p>
                     Envío asegurado sin costo en pedidos superiores a $400.000 COP a nivel nacional e internacional.
-                    Cambios de talla y devoluciones garantizadas durante los primeros 30 días con su sello de archivo intacto.
+                    Cambios de talla y devoluciones garantizadas durante los primeros 30 días.
                   </p>
                 ),
               },
               {
-                title: 'Certificado de autenticidad y conservación',
+                title: 'Diseño original y conservación',
                 body: (
                   <p>
-                    Cada pieza de archivo o par de colección incluye certificado numerado de autenticidad VESTIGIO,
-                    funda guardapolvo en algodón orgánico y guía de conservación textil.
+                    Cada prenda y par de calzado de VESTIGIO es un diseño original patronado desde cero en nuestro atelier,
+                    entregado en funda guardapolvo de algodón orgánico con certificado numerado.
                   </p>
                 ),
               },
@@ -337,7 +263,7 @@ function ProductView({ product }) {
       <section className="section" aria-labelledby="related-title">
         <div className="section__head" data-reveal>
           <h2 id="related-title" className="h2">
-            En la misma <em>sala</em>
+            En el mismo <em>rack de sala</em>
           </h2>
         </div>
         <div className="grid grid--4" data-reveal-stagger>

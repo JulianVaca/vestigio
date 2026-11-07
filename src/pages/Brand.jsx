@@ -4,12 +4,12 @@ import Logo from '../components/Logo.jsx'
 import { useMotionPref } from '../context/MotionContext.jsx'
 
 const palette = [
-  { name: 'Granito Abisal', hex: '#121514', use: 'Fondo principal del pórtico y salas' },
-  { name: 'Mármol Pentélico', hex: '#F2EFE9', use: 'Texto principal y relieves claros' },
-  { name: 'Laurel Botánico', hex: '#5E9E7E', use: 'Acción principal, plantas y acentos' },
-  { name: 'Bronce de Delfos', hex: '#C8B07A', use: 'Precios, marquillas y foco de teclado' },
-  { name: 'Ceniza de Olivo', hex: '#A3ADA6', use: 'Texto secundario y piedra erosionada' },
-  { name: 'Granito Labrado', hex: '#242B28', use: 'Tarjetas, pedestales y paneles' },
+  { name: 'Travertino Ático', hex: '#F3EFE6', use: 'Fondo principal luminoso de la tienda-museo' },
+  { name: 'Basalto Griego', hex: '#181B19', use: 'Tipografía principal y contraste de alto impacto' },
+  { name: 'Hoja de Olivo Egeo', hex: '#2D5A40', use: 'Acción principal, botánica y acentos de sala' },
+  { name: 'Bronce Helénico', hex: '#8C662C', use: 'Barras de los racks, perchas y precios' },
+  { name: 'Piedra de Olivo', hex: '#525954', use: 'Texto secundario y descripciones técnicas' },
+  { name: 'Granito Griego Claro', hex: '#EAE4D7', use: 'Superficies de tarjetas, pedestales y racks' },
 ]
 
 // Contraste WCAG 2.x
@@ -25,10 +25,10 @@ const contrast = (a, b) => {
 }
 
 const motionTokens = [
-  { name: 'Zoom Marquilla', css: 'cubic-bezier(0.22, 1, 0.36, 1)', ease: [0.22, 1, 0.36, 1], dur: 0.75, use: 'Zoom-out desde la marquilla tejida al elegir la talla' },
+  { name: 'Deslizamiento Rack', css: 'spring(290, 28)', spring: true, use: 'Física de las perchas al recorrer los racks de tienda' },
   { name: 'Telón Helénico', css: 'cubic-bezier(0.76, 0, 0.24, 1)', ease: [0.76, 0, 0.24, 1], dur: 0.5, use: 'Transiciones de sala y menús con peso arquitectónico' },
   { name: 'Carrera Carrito', css: 'cubic-bezier(0.22, 0.88, 0.38, 1)', ease: [0.22, 0.88, 0.38, 1], dur: 0.78, use: 'Sprint dinámico del carrito frente a la pantalla' },
-  { name: 'Sello Archivo', css: 'spring(600, 14)', spring: true, use: 'Cápsula 3D y rebote del carrito al añadir una pieza' },
+  { name: 'Cápsula al Carrito', css: 'spring(600, 14)', spring: true, use: 'Vuelo de la prenda desde la percha al carrito' },
 ]
 
 function EaseDemo({ token }) {
@@ -39,7 +39,7 @@ function EaseDemo({ token }) {
         <motion.span
           className="ease-demo__rail"
           animate={{ x: on ? '100%' : '0%' }}
-          transition={token.spring ? { type: 'spring', stiffness: 600, damping: 14 } : { duration: token.dur, ease: token.ease }}
+          transition={token.spring ? { type: 'spring', stiffness: 290, damping: 24 } : { duration: token.dur, ease: token.ease }}
         >
           <span className="ease-demo__dot" />
         </motion.span>
@@ -53,13 +53,13 @@ export default function Brand() {
   return (
     <main id="main" className="page container brand">
       <header className="page__head">
-        <p className="eyebrow">Sistema de Diseño · Estilo Griego & Botánica</p>
+        <p className="eyebrow">Sistema de Diseño · Travertino, Granito & Botánica</p>
         <h1 className="h1">
           Identidad <em>VESTIGIO</em>
         </h1>
         <p className="page__lead">
-          Paleta inspirada en el granito helénico, el mármol del Pentélico y la vegetación mediterránea (olivos, laureles y
-          musgo), diseñada para exhibir archivo de streetwear e historia.
+          Paleta luminosa inspirada en el mármol travertino griego, el granito claro pulido, el bronce cepillado de los racks de
+          tienda y los olivos mediterráneos.
         </p>
       </header>
 
@@ -75,8 +75,8 @@ export default function Brand() {
             </div>
           </div>
           <p>
-            La «V» es un pórtico dórico apoyado sobre un estilóbato en verde laurel botánico: el pedestal donde dialogan la
-            antigüedad clásica y el streetwear de culto.
+            La «V» es un pórtico dórico apoyado sobre un estilóbato en hoja de olivo: el espacio donde dialogan la arquitectura
+            clásica y nuestras 30 prendas originales de autor.
           </p>
         </article>
 
@@ -86,16 +86,16 @@ export default function Brand() {
             Fraunces <em>Italic</em>
           </p>
           <p className="brand__type-meta">Display · titulares monumentales e inscripciones de sala</p>
-          <p className="brand__type-body">Inter — interfaz, marquillas técnicas, precios y fichas de conservación.</p>
+          <p className="brand__type-body">Inter — interfaz de percheros, tallas, precios y fichas del atelier.</p>
           <p className="brand__type-meta">Alojadas localmente con carga instantánea.</p>
         </article>
 
         <article className="brand__block brand__block--wide">
-          <h2 className="brand__label">Paleta Griega: Granito & Plantas (Contraste WCAG)</h2>
+          <h2 className="brand__label">Paleta Flagship: Travertino, Granito & Olivo (Contraste WCAG)</h2>
           <ul className="palette">
             {palette.map((c) => {
-              const onDark = contrast(c.hex, '#121514')
-              const onLight = contrast(c.hex, '#F2EFE9')
+              const onTravertine = contrast(c.hex, '#F3EFE6')
+              const onBasalt = contrast(c.hex, '#181B19')
               return (
                 <li key={c.hex} className="palette__item">
                   <span className="palette__swatch" style={{ background: c.hex }} />
@@ -103,8 +103,8 @@ export default function Brand() {
                   <code>{c.hex}</code>
                   <span className="palette__use">{c.use}</span>
                   <span className="palette__ratio">
-                    {c.hex !== '#121514' && `sobre Granito ${onDark.toFixed(1)}:1`}
-                    {c.hex === '#121514' && `sobre Mármol ${onLight.toFixed(1)}:1`}
+                    {c.hex !== '#F3EFE6' && `sobre Travertino ${onTravertine.toFixed(1)}:1`}
+                    {c.hex === '#F3EFE6' && `sobre Basalto ${onBasalt.toFixed(1)}:1`}
                   </span>
                 </li>
               )
@@ -113,16 +113,16 @@ export default function Brand() {
         </article>
 
         <article className="brand__block">
-          <h2 className="brand__label">Curaduría & Tono</h2>
+          <h2 className="brand__label">Diseño de Autor & Tienda</h2>
           <ul className="brand__list">
             <li>
-              <strong>Rigor histórico.</strong> Documentamos el año, diseñador y contexto cultural de cada prenda y sneaker.
+              <strong>Prendas creadas desde cero.</strong> Cada una de las 30 piezas es un diseño original de nuestro atelier.
             </li>
             <li>
-              <strong>Arquitectura natural.</strong> El granito tallado y el follaje botánico enmarcan cada pieza sin saturar.
+              <strong>Racks interactivos en 2D y 3D.</strong> Explora la ropa colgada en percheros de bronce tanto en el catálogo como en la tienda 3D.
             </li>
             <li>
-              <strong>Interacción táctil.</strong> Marquilla tejida interactiva y carrito dinámico.
+              <strong>Arquitectura luminosa.</strong> La piedra travertino realza las texturas de las telas sin oscurecer los detalles.
             </li>
           </ul>
         </article>

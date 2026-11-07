@@ -1,8 +1,9 @@
 import { useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
-import { products, categories } from '../data/products.js'
+import { products, categories, rooms } from '../data/products.js'
 import ProductCard from '../components/ProductCard.jsx'
+import BoutiqueRack from '../components/BoutiqueRack.jsx'
 import { useScrollAnimations } from '../hooks/useScrollAnimations.js'
 
 const sorts = {
@@ -16,6 +17,7 @@ export default function Catalog() {
   const [params, setParams] = useSearchParams()
   const cat = params.get('cat') || 'Todo'
   const [sort, setSort] = useState('relevance')
+  const [viewMode, setViewMode] = useState('both') // 'both' | 'racks' | 'grid'
   useScrollAnimations(scope)
 
   const list = useMemo(
@@ -26,18 +28,18 @@ export default function Catalog() {
   return (
     <main id="main" ref={scope} className="page container">
       <header className="page__head" data-reveal>
-        <p className="eyebrow">Exposición 01 · Ágora & Archivo · 30 Piezas</p>
+        <p className="eyebrow">Colección Permanente · 30 Diseños Originales de Atelier</p>
         <h1 className="h1">
-          Catá<em>logo</em>
+          Catálogo & <em>Racks</em>
         </h1>
         <p className="page__lead">
-          Treinta piezas autenticadas en cinco salas: archivo de Diseñador, Billionaire Boys Club, BAPE & Base, Yeezy y Sneakers
-          históricos. Pulsa «Elegir talla · Marquilla» en cualquier prenda para hacer zoom-out a su etiqueta.
+          Explora nuestras 30 prendas creadas desde cero como si recorrieras los percheros de nuestra tienda física:
+          desliza las perchas de bronce, inspecciona cada caída textil y descuelga tu talla directamente al carrito.
         </p>
       </header>
 
       <div className="toolbar" data-reveal>
-        <div className="chips" role="group" aria-label="Filtrar por sala o colección">
+        <div className="chips" role="group" aria-label="Filtrar por línea del atelier">
           {categories.map((c) => (
             <button
               key={c}
@@ -56,43 +58,94 @@ export default function Catalog() {
             </button>
           ))}
         </div>
-        <label className="select">
-          <span className="sr-only">Ordenar</span>
-          <select value={sort} onChange={(e) => setSort(e.target.value)}>
-            {Object.entries(sorts).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v.label}
-              </option>
+
+        <div className="toolbar__right">
+          <div className="view-switch" role="group" aria-label="Modo de visualización de tienda">
+            {[
+              { id: 'both', label: 'Rack + Galería' },
+              { id: 'racks', label: '5 Racks de Tienda' },
+              { id: 'grid', label: 'Solo Cuadrícula' },
+            ].map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                className={`view-switch__btn ${viewMode === m.id ? 'is-active' : ''}`}
+                onClick={() => setViewMode(m.id)}
+              >
+                {m.label}
+              </button>
             ))}
-          </select>
-        </label>
+          </div>
+
+          <label className="select">
+            <span className="sr-only">Ordenar</span>
+            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+              {Object.entries(sorts).map(([k, v]) => (
+                <option key={k} value={k}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
-      <p className="results" aria-live="polite">
-        Mostrando {list.length} {list.length === 1 ? 'pieza de archivo' : 'piezas de archivo'}
-      </p>
+      {/* Vista de Rack Principal + Cuadrícula */}
+      {viewMode === 'both' && (
+        <BoutiqueRack
+          items={list}
+          title={cat === 'Todo' ? 'Perchero Central · 30 Piezas de Autor' : `Perchero · ${cat}`}
+          subtitle="Haz clic en cualquier percha lateral, usa las flechas o arrastra horizontalmente para recorrer las prendas colgadas."
+        />
+      )}
 
-      <motion.div layout className="grid grid--4">
-        <AnimatePresence mode="popLayout">
-          {list.map((p, i) => (
-            <motion.div
-              key={p.id}
-              layout
-              initial={{ opacity: 0, scale: 0.94, y: 24 }}
-              animate={{
-                opacity: 1,
-                scale: 1,
-                y: 0,
-                transition: { delay: Math.min(i * 0.03, 0.35), duration: 0.45, ease: [0.22, 1, 0.36, 1] },
-              }}
-              exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.2 } }}
-              transition={{ layout: { type: 'spring', stiffness: 320, damping: 34 } }}
-            >
-              <ProductCard product={p} priority={i < 4} />
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </motion.div>
+      {/* Vista de los 5 Racks de Tienda por Sala */}
+      {viewMode === 'racks' && (
+        <div className="racks-stack">
+          {rooms.map((r) => {
+            const roomItems = products.filter((p) => p.room === r.id && (cat === 'Todo' || p.category === cat))
+            if (!roomItems.length) return null
+            return (
+              <BoutiqueRack
+                key={r.id}
+                items={roomItems}
+                title={r.name}
+                subtitle={r.text}
+              />
+            )
+          })}
+        </div>
+      )}
+
+      {viewMode !== 'racks' && (
+        <>
+          <p className="results" aria-live="polite">
+            Mostrando {list.length} {list.length === 1 ? 'prenda original' : 'prendas originales'} en vitrina
+          </p>
+
+          <motion.div layout className="grid grid--4">
+            <AnimatePresence mode="popLayout">
+              {list.map((p, i) => (
+                <motion.div
+                  key={p.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.94, y: 24 }}
+                  animate={{
+                    opacity: 1,
+                    scale: 1,
+                    y: 0,
+                    transition: { delay: Math.min(i * 0.03, 0.35), duration: 0.45, ease: [0.22, 1, 0.36, 1] },
+                  }}
+                  exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.2 } }}
+                  transition={{ layout: { type: 'spring', stiffness: 320, damping: 34 } }}
+                >
+                  <ProductCard product={p} priority={i < 4} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        </>
+      )}
     </main>
   )
 }
