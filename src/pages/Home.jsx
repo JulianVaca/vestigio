@@ -1,13 +1,93 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { products, rooms } from '../data/products.js'
+import { AnimatePresence, motion } from 'framer-motion'
+import { products, rooms, getProduct, formatPrice } from '../data/products.js'
+import { sneakers, getMarket, formatPct } from '../data/market.js'
 import ProductCard from '../components/ProductCard.jsx'
 import BoutiqueRack from '../components/BoutiqueRack.jsx'
+import { OliveBranch } from '../components/Ornaments.jsx'
 import { ArrowIcon, CubeIcon } from '../components/Icons.jsx'
 import { useScrollAnimations, loadGsap } from '../hooks/useScrollAnimations.js'
 import { useMotionPref } from '../context/MotionContext.jsx'
 
-const base = import.meta.env.BASE_URL
+const HERO_PIECES = ['bbc-icecream-varsity', 'offwhite-caravaggio-varsity', 'base-doric-hoodie', 'bape-m65-laurel'].map(getProduct)
+const HERO_MS = 5200
+
+/** Nicho en arco de travertino con la prenda destacada colgada en percha dorada. */
+function HeroNiche({ reduced }) {
+  const [i, setI] = useState(0)
+  const [paused, setPaused] = useState(false)
+
+  useEffect(() => {
+    if (reduced || paused) return
+    const id = setInterval(() => setI((v) => (v + 1) % HERO_PIECES.length), HERO_MS)
+    return () => clearInterval(id)
+  }, [reduced, paused])
+
+  const p = HERO_PIECES[i]
+  return (
+    <div
+      className="hero__media atrium__stage"
+      onPointerEnter={() => setPaused(true)}
+      onPointerLeave={() => setPaused(false)}
+    >
+      <OliveBranch className="atrium__olive atrium__olive--l" />
+      <OliveBranch className="atrium__olive atrium__olive--r" flip />
+      <div className="atrium__niche">
+        <span className="atrium__glow" aria-hidden="true" />
+        {HERO_PIECES.map((piece, k) => (
+          <img
+            key={piece.id}
+            className={`atrium__piece ${k === i ? 'is-active' : ''}`}
+            src={piece.img}
+            srcSet={`${piece.img.replace('.webp', '-sm.webp')} 420w, ${piece.img} 840w`}
+            sizes="(max-width: 860px) 70vw, 34vw"
+            alt={k === i ? `${piece.name} en el nicho de exhibición` : ''}
+            aria-hidden={k !== i}
+            width="840"
+            height="1120"
+            fetchpriority={k === 0 ? 'high' : 'low'}
+            loading={k === 0 ? 'eager' : 'lazy'}
+            decoding={k === 0 ? 'sync' : 'async'}
+          />
+        ))}
+      </div>
+      <div className="atrium__plinth" aria-hidden="true" />
+
+      <Link to={`/producto/${p.id}`} className="atrium__tag">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={p.id}
+            className="atrium__tag-inner"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3 }}
+          >
+            <span className="atrium__tag-kicker">Pieza en nicho · {String(i + 1).padStart(2, '0')}</span>
+            <span className="atrium__tag-name">{p.name}</span>
+            <span className="atrium__tag-price">{formatPrice(p.price)}</span>
+          </motion.span>
+        </AnimatePresence>
+        <ArrowIcon width={18} height={18} />
+      </Link>
+
+      <div className="atrium__dots" role="group" aria-label="Elegir pieza destacada">
+        {HERO_PIECES.map((piece, k) => (
+          <button
+            key={piece.id}
+            type="button"
+            className={k === i ? 'is-active' : ''}
+            aria-label={`Ver ${piece.name}`}
+            aria-pressed={k === i}
+            onClick={() => setI(k)}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const manifesto =
   'No seguimos tendencias efímeras; esculpimos prendas originales que perduran como la piedra. En VESTIGIO cada pieza nace desde cero en nuestro atelier dialogando con la arquitectura griega de travertino, el bronce cepillado y la vida botánica del Mediterráneo.'
 
@@ -32,7 +112,7 @@ export default function Home() {
           scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
         })
         gsap.to('.hero__media', {
-          yPercent: 18,
+          yPercent: 10,
           ease: 'none',
           scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
         })
@@ -41,7 +121,7 @@ export default function Home() {
           '.manifesto__word',
           { color: '#A39C8E' },
           {
-            color: '#181B19',
+            color: '#161917',
             stagger: 0.05,
             ease: 'none',
             scrollTrigger: { trigger: '.manifesto', start: 'top 75%', end: 'bottom 45%', scrub: true },
@@ -65,8 +145,8 @@ export default function Home() {
         const xTo = gsap.quickTo(media, 'x', { duration: 1.2, ease: 'power3.out' })
         const yTo = gsap.quickTo(media, 'y', { duration: 1.2, ease: 'power3.out' })
         onMove = (e) => {
-          xTo((e.clientX / window.innerWidth - 0.5) * -24)
-          yTo((e.clientY / window.innerHeight - 0.5) * -16)
+          xTo((e.clientX / window.innerWidth - 0.5) * -14)
+          yTo((e.clientY / window.innerHeight - 0.5) * -10)
         }
         window.addEventListener('pointermove', onMove)
       }
@@ -93,52 +173,58 @@ export default function Home() {
 
   return (
     <main id="main" ref={scope}>
-      {/* ───────────── HERO EN ALTA RESOLUCIÓN ───────────── */}
-      <section className="hero" aria-labelledby="hero-title">
-        <div className="hero__media">
-          <img
-            className="hero__img"
-            src={`${base}img/hero-hd.webp`}
-            srcSet={`${base}img/hero-sm.webp 960w, ${base}img/hero.webp 1920w, ${base}img/hero-hd.webp 2560w`}
-            sizes="100vw"
-            alt="Sala arquitectónica de VESTIGIO con columnas griegas, olivos mediterráneos y piezas originales de streetwear"
-            width="2560"
-            height="1440"
-            fetchpriority="high"
-          />
-          <div className="hero__shade" />
-        </div>
+      {/* ───────────── HERO «ATRIO ÁUREO»: nicho en arco con la prenda destacada ───────────── */}
+      <section className="hero atrium" aria-labelledby="hero-title">
+        <div className="atrium__bg" aria-hidden="true" />
 
-        <div className="hero__content container">
-          <p className="hero__eyebrow eyebrow">Atelier VESTIGIO · 30 Diseños Originales · 5 Salas</p>
-          <h1 id="hero-title" className="hero__title">
-            <span className="hero__line">
-              <span>Streetwear con</span>
-            </span>
-            <span className="hero__line">
-              <span>
-                <em>historia.</em>
+        <div className="atrium__grid container">
+          <div className="hero__content atrium__content">
+            <p className="atrium__eyebrow">
+              <span className="atrium__rule" aria-hidden="true" />
+              Maison VESTIGIO · Bogotá · Colección Áurea
+            </p>
+            <h1 id="hero-title" className="atrium__title">
+              <span className="hero__line">
+                <span>Streetwear</span>
               </span>
-            </span>
-          </h1>
-          <p className="hero__lead">
-            Treinta prendas originales creadas desde cero en nuestro atelier y exhibidas en percheros interactivos de bronce entre
-            columnas griegas de travertino y olivos mediterráneos.
-          </p>
-          <div className="hero__actions">
-            <Link to="/museo" className="btn btn--primary">
-              <CubeIcon width={18} height={18} /> Entrar a la tienda-museo 3D
-            </Link>
-            <Link to="/catalogo" className="btn btn--ghost hero__ghost-btn">
-              Recorrer los racks <ArrowIcon width={18} height={18} />
-            </Link>
+              <span className="hero__line">
+                <span>
+                  con <em>historia.</em>
+                </span>
+              </span>
+            </h1>
+            <p className="atrium__lead">
+              Treinta prendas de autor patronadas desde cero en nuestro atelier, entre columnas de travertino, olivos
+              mediterráneos y herrajes de oro viejo.
+            </p>
+            <div className="atrium__actions">
+              <Link to="/catalogo" className="btn btn--gold">
+                Explorar la colección <ArrowIcon width={18} height={18} />
+              </Link>
+              <Link to="/museo" className="btn btn--ghost btn--on-dark">
+                <CubeIcon width={18} height={18} /> Tienda-museo 3D
+              </Link>
+            </div>
+            <dl className="atrium__stats">
+              <div>
+                <dt>Prendas de autor</dt>
+                <dd>30</dd>
+              </div>
+              <div>
+                <dt>Salas temáticas</dt>
+                <dd>05</dd>
+              </div>
+              <div>
+                <dt>Sneakers verificados</dt>
+                <dd>06</dd>
+              </div>
+            </dl>
           </div>
+
+          <HeroNiche reduced={reduced} />
         </div>
 
-        <div className="hero__scroll" aria-hidden="true">
-          <span>Desliza</span>
-          <i />
-        </div>
+        <div className="meander" aria-hidden="true" />
       </section>
 
       {/* ───────────── MARQUEE ───────────── */}
@@ -190,6 +276,43 @@ export default function Home() {
           {featured.map((p, idx) => (
             <ProductCard key={p.id} product={p} priority={idx < 4} />
           ))}
+        </div>
+      </section>
+
+      {/* ───────────── MERCADO DE SNEAKERS (teaser) ───────────── */}
+      <section className="market-teaser" aria-labelledby="market-title">
+        <div className="container">
+          <div className="section__head" data-reveal>
+            <div>
+              <p className="eyebrow eyebrow--light">Mercado Pedestal · Autenticidad verificada</p>
+              <h2 id="market-title" className="h2">
+                Sneakers con <em>precio de mercado</em>
+              </h2>
+            </div>
+            <Link to="/sneakers" className="link-arrow link-arrow--light">
+              Ver el mercado completo <ArrowIcon width={18} height={18} />
+            </Link>
+          </div>
+          <ul className="market-teaser__list" data-reveal-stagger>
+            {sneakers.slice(0, 3).map((s) => {
+              const m = getMarket(s)
+              return (
+                <li key={s.id}>
+                  <Link to={`/sneakers/${s.id}`} className="mtile mtile--dark">
+                    <span className="mtile__media">
+                      <img src={s.img.replace('.webp', '-sm.webp')} alt="" width="420" height="560" loading="lazy" />
+                    </span>
+                    <span className="mtile__name">{s.name}</span>
+                    <span className="mtile__label">Precio más bajo</span>
+                    <span className="mtile__price">{formatPrice(m.lowestAsk)}</span>
+                    <span className={`mtile__change ${m.change >= 0 ? 'is-up' : 'is-down'}`}>
+                      {m.change >= 0 ? '▲' : '▼'} {formatPct(m.change)} esta semana
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
         </div>
       </section>
 

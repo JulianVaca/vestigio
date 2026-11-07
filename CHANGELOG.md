@@ -1,4 +1,40 @@
-# Registro de Cambios (Changelog) — VESTIGIO v2.0
+# Registro de Cambios (Changelog) — VESTIGIO
+
+## [2.2.0] — «Helénico Botánico Áureo» (2026-11-07)
+
+### 1. Rendimiento del museo 3D en PC (`src/museum/`)
+La versión móvil iba fluida pero en PC se sentía lenta. Causas encontradas y corregidas:
+- **Regeneración del mapa de entorno en cada hover (causa principal).** `onReady` se pasaba como función inline, así que cada hover del mouse (que no existe en móvil) re-renderizaba `MuseumExperience`, cambiaba la identidad de `onReady` y el `useEffect` de `Scene` destruía y volvía a generar el PMREM completo. Ahora `onReady` es estable (`useCallback`) y se lee desde un ref.
+- **`Scene` y `Artwork` memoizados (`React.memo`).** El hover de cada prenda vive en un `ref` local leído en `useFrame`: pasar el cursor ya no reconcilia las 30 obras ni la arquitectura.
+- **Herrajes de los 30 racks con `InstancedMesh`.** Base, postes, barra, soportes, prendas de fondo, atril, cono de luz y lámpara pasan de ~360 draw calls a 9. El shader del cono aplica `instanceMatrix` y usa `FrontSide` (la mitad de sobre-dibujo aditivo).
+- **Presupuesto de píxeles + DPR adaptativo.** El DPR se calcula según el tamaño de la ventana (máx. ~2,6 MP por fotograma en PC) y el antialiasing sólo se activa si el lienzo resultante es moderado. Un componente `AdaptiveDpr` mide los FPS cada segundo y baja/sube la resolución con histéresis.
+- **Bug corregido:** `ProductPanel` usaba `useMemo` sin importarlo; el panel de la prenda en el museo fallaba al abrirse.
+
+### 2. Paleta «Helénico Botánico Áureo» (`src/styles/global.css`, `/marca`)
+- Marfil Pentélico `#F5F1E8`, Ciprés Nocturno `#0F1A14`, Laurel Profundo `#23432F`, Oro Antiguo `#B8964F`, Oro Claro `#DCC48E`, Oro Antiguo Texto `#7A5A22`, Basalto `#161917`.
+- Regla del oro: el oro brillante es sólo ornamento (herrajes, grecas, bordes). El texto dorado sobre marfil usa `#7A5A22` (5,6:1, WCAG AA).
+- Nuevos botones `btn--gold` y `btn--on-dark`; header claro sobre los heros oscuros.
+
+### 3. Nueva portada «Atrio Áureo» (`src/pages/Home.jsx`)
+- La fotografía del hero se reemplaza por un nicho en arco de travertino con la prenda destacada colgada (4 piezas en rotación), ramas de olivo y greca griega en oro, sobre fondo ciprés.
+- Cifras clave, etiqueta flotante con nombre y precio, y precarga de la nueva imagen LCP en `index.html`.
+- Nueva sección «Sneakers con precio de mercado» en la portada.
+
+### 4. Rack de boutique lateral (`src/components/BoutiqueRack.jsx`)
+- Las prendas cuelgan **de lado** sobre una barra dorada con remates, como en un perchero de tienda física (canto de tela visible en el color de la prenda).
+- Al pasar el cursor (o enfocar con teclado) la percha gira y la prenda queda **de frente**, con etiqueta de nombre y precio. Clic o toque fija la prenda y abre la ficha de compra rápida.
+- Arrastre con mouse, scroll táctil nativo, flechas del teclado y centrado automático de la percha activa.
+
+### 5. Sistema de tallas (`src/components/SizeSelector.jsx`, `SizeGuide.jsx`, `src/data/sizing.js`)
+- Existencias por talla (disponible / últimas unidades / agotada), talla recomendada marcada y medidor de calce (ceñido · fiel · amplio) según el patronaje.
+- Guía de tallas en hoja lateral accesible: **Encuentra tu talla** (estatura, peso y preferencia de calce, o largo de pie para sneakers), tabla de medidas en cm/pulgadas y cómo medir.
+- El perfil del visitante se guarda en el navegador y marca su talla en todo el sitio.
+
+### 6. Mercado de Sneakers (`/sneakers`, `/sneakers/:id`)
+- Listado tipo mercado de reventa: precio más bajo (también por talla), variación semanal, unidades vendidas, filtros por silueta y talla, y orden por precio, variación o ventas.
+- Ficha con escenario de producto con inclinación 3D, vistas lateral/medial/detalle, precio por talla, **Comprar** o **Hacer oferta**, gráfico interactivo del historial de precio (1M/3M/6M/1A), últimas ventas, métricas de mercado y proceso de autenticación.
+- El carrito acepta precio de mercado por línea (`add(id, talla, cantidad, precio)`).
+- Los datos de mercado se generan de forma determinista en `src/data/market.js` hasta conectar el inventario real.
 
 ## [2.0.0] — Exposición "Ágora & Archivo" (Producción)
 

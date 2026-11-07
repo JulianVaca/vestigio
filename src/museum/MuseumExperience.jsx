@@ -1,5 +1,5 @@
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
@@ -12,6 +12,58 @@ import { flyToCart } from '../lib/flyToCart.js'
 import { ArrowIcon, ArrowLeftIcon, CloseIcon, PlayIcon, PauseIcon, PlusIcon, CheckIcon, TagIcon } from '../components/Icons.jsx'
 
 const AUTOPLAY_MS = 6500
+
+/**
+ * Perfil de calidad calculado una sola vez al montar.
+ * En PC el cuello de botella es el fill-rate: monitores 1440p/4K con DPR 1.25–1.5
+ * y MSAA multiplicaban los píxeles por fotograma. Se fija un presupuesto de píxeles
+ * y el antialiasing sólo se activa cuando el lienzo resultante es moderado.
+ */
+function detectQuality() {
+  if (typeof window === 'undefined') return { lowPower: false, maxDpr: 1, minDpr: 0.75, antialias: true }
+  const coarse = window.matchMedia('(pointer: coarse)').matches
+  const cores = navigator.hardwareConcurrency || 8
+  const lowPower = coarse || cores <= 4
+  const deviceDpr = window.devicePixelRatio || 1
+  const px = window.innerWidth * window.innerHeight
+  const budget = lowPower ? 1.4e6 : 2.6e6 // píxeles renderizados por fotograma
+  const byBudget = Math.sqrt(budget / px)
+  const maxDpr = Math.max(Math.min(1, deviceDpr), Math.min(deviceDpr, lowPower ? 1.25 : 1.5, byBudget))
+  const antialias = !lowPower && px * maxDpr * maxDpr <= 2.6e6
+  return { lowPower, maxDpr, minDpr: Math.min(maxDpr, 0.7), antialias }
+}
+
+/**
+ * DPR adaptativo: mide los FPS cada segundo y baja/sube la resolución interna
+ * con histéresis para que GPUs integradas de portátil mantengan la fluidez.
+ */
+function AdaptiveDpr({ min, max }) {
+  const setDpr = useThree((s) => s.setDpr)
+  const st = useRef({ acc: 0, frames: 0, dpr: max, cooldown: 1 })
+  useFrame((_, delta) => {
+    if (delta > 0.25) return // pestaña en segundo plano o pausa: no medir
+    const s = st.current
+    s.acc += delta
+    s.frames++
+    if (s.acc < 1) return
+    const fps = s.frames / s.acc
+    s.acc = 0
+    s.frames = 0
+    if (s.cooldown > 0) {
+      s.cooldown--
+      return
+    }
+    let next = s.dpr
+    if (fps < 48) next = Math.max(min, s.dpr - 0.15)
+    else if (fps > 58 && s.dpr < max) next = Math.min(max, s.dpr + 0.1)
+    if (Math.abs(next - s.dpr) > 0.01) {
+      s.dpr = next
+      setDpr(next)
+      s.cooldown = 2
+    }
+  })
+  return null
+}
 
 export default function MuseumExperience({ reduced, initialStation = 0, initialProduct = null }) {
   const navigate = useNavigate()
@@ -26,10 +78,19 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
   const [selected, setSelected] = useState(null)
   const [autoplay, setAutoplay] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const lowPower =
-    typeof window !== 'undefined' &&
-    (window.matchMedia('(pointer: coarse)').matches || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4))
-  const isPortrait = typeof window !== 'undefined' && window.innerWidth < window.innerHeight
+  const [quality] = useState(detectQuality)
+  const { lowPower } = quality
+  const [isPortrait] = useState(() => typeof window !== 'undefined' && window.innerWidth < window.innerHeight)
+  // Callbacks estables: Scene está memoizada y no debe re-renderizarse con cada hover del HUD
+  const handleReady = useCallback(() => setLoaded(true), [])
+  const glOptions = useMemo(
+    () => ({ antialias: quality.antialias, powerPreference: 'high-performance', stencil: false }),
+    [quality.antialias],
+  )
+  const cameraOptions = useMemo(
+    () => ({ fov: isPortrait ? 76 : 60, near: 0.1, far: 95, position: [0, 1.68, 9.8] }),
+    [isPortrait],
+  )
 
   useEffect(() => {
     const m = THREE.DefaultLoadingManager
@@ -122,24 +183,24 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
     <div className={`museum ${started ? 'is-started' : ''}`}>
       <Canvas
         className="museum__canvas"
-        dpr={[1, lowPower ? 1.25 : 1.5]}
-        gl={{ antialias: !lowPower, powerPreference: 'high-performance', stencil: false }}
-        camera={{ fov: isPortrait ? 76 : 60, near: 0.1, far: 95, position: [0, 1.68, 9.8] }}
+        dpr={quality.maxDpr}
+        gl={glOptions}
+        camera={cameraOptions}
         aria-label="Museo 3D interactivo de la colección Ágora y Archivo"
         role="img"
       >
         <color attach="background" args={['#EAE4D7']} />
         <fog attach="fog" args={['#EAE4D7', 18, 56]} />
+        <AdaptiveDpr min={quality.minDpr} max={quality.maxDpr} />
         <Suspense fallback={null}>
           <Scene
             reduced={reduced}
             lowPower={lowPower}
-            hoveredId={hovered}
             onHover={setHovered}
             onSelect={onSelect}
             onFloorClick={onFloorClick}
             onNavigate={navigate}
-            onReady={() => setLoaded(true)}
+            onReady={handleReady}
           />
         </Suspense>
         <Rig

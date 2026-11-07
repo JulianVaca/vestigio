@@ -3,13 +3,19 @@ import { motion } from 'framer-motion'
 import Logo from '../components/Logo.jsx'
 import { useMotionPref } from '../context/MotionContext.jsx'
 
+// Paleta «Helénico Botánico Áureo» (v2.2). El oro brillante es sólo ornamento;
+// el texto dorado usa Oro Antiguo Texto para cumplir WCAG AA sobre marfil.
+const BG = '#F5F1E8'
+const DARK = '#0F1A14'
 const palette = [
-  { name: 'Travertino Ático', hex: '#F3EFE6', use: 'Fondo principal luminoso de la tienda-museo' },
-  { name: 'Basalto Griego', hex: '#181B19', use: 'Tipografía principal y contraste de alto impacto' },
-  { name: 'Hoja de Olivo Egeo', hex: '#2D5A40', use: 'Acción principal, botánica y acentos de sala' },
-  { name: 'Bronce Helénico', hex: '#8C662C', use: 'Barras de los racks, perchas y precios' },
-  { name: 'Piedra de Olivo', hex: '#525954', use: 'Texto secundario y descripciones técnicas' },
-  { name: 'Granito Griego Claro', hex: '#EAE4D7', use: 'Superficies de tarjetas, pedestales y racks' },
+  { name: 'Marfil Pentélico', hex: '#F5F1E8', use: 'Fondo principal luminoso', on: DARK },
+  { name: 'Ciprés Nocturno', hex: '#0F1A14', use: 'Hero, mercado de sneakers y secciones de lujo', on: BG },
+  { name: 'Laurel Profundo', hex: '#23432F', use: 'Acción principal y botánica', on: BG },
+  { name: 'Oro Antiguo', hex: '#B8964F', use: 'Sólo ornamento: herrajes, grecas, bordes', on: DARK },
+  { name: 'Oro Claro', hex: '#DCC48E', use: 'Texto y cifras sobre Ciprés', on: DARK },
+  { name: 'Oro Antiguo Texto', hex: '#7A5A22', use: 'Precios y etiquetas doradas sobre marfil', on: BG },
+  { name: 'Basalto', hex: '#161917', use: 'Tipografía principal', on: BG },
+  { name: 'Piedra de Olivo', hex: '#50574F', use: 'Texto secundario', on: BG },
 ]
 
 // Contraste WCAG 2.x
@@ -53,13 +59,13 @@ export default function Brand() {
   return (
     <main id="main" className="page container brand">
       <header className="page__head">
-        <p className="eyebrow">Sistema de Diseño · Travertino, Granito & Botánica</p>
+        <p className="eyebrow">Sistema de Diseño · Helénico Botánico Áureo</p>
         <h1 className="h1">
           Identidad <em>VESTIGIO</em>
         </h1>
         <p className="page__lead">
-          Paleta luminosa inspirada en el mármol travertino griego, el granito claro pulido, el bronce cepillado de los racks de
-          tienda y los olivos mediterráneos.
+          Marfil de mármol pentélico y laurel profundo para el día a día; ciprés nocturno y oro antiguo para los momentos de
+          lujo. El oro se usa como joyería: poco, en líneas y herrajes, nunca como fondo de texto.
         </p>
       </header>
 
@@ -91,24 +97,19 @@ export default function Brand() {
         </article>
 
         <article className="brand__block brand__block--wide">
-          <h2 className="brand__label">Paleta Flagship: Travertino, Granito & Olivo (Contraste WCAG)</h2>
+          <h2 className="brand__label">Paleta Helénico Botánico Áureo (Contraste WCAG)</h2>
           <ul className="palette">
-            {palette.map((c) => {
-              const onTravertine = contrast(c.hex, '#F3EFE6')
-              const onBasalt = contrast(c.hex, '#181B19')
-              return (
-                <li key={c.hex} className="palette__item">
-                  <span className="palette__swatch" style={{ background: c.hex }} />
-                  <strong>{c.name}</strong>
-                  <code>{c.hex}</code>
-                  <span className="palette__use">{c.use}</span>
-                  <span className="palette__ratio">
-                    {c.hex !== '#F3EFE6' && `sobre Travertino ${onTravertine.toFixed(1)}:1`}
-                    {c.hex === '#F3EFE6' && `sobre Basalto ${onBasalt.toFixed(1)}:1`}
-                  </span>
-                </li>
-              )
-            })}
+            {palette.map((c) => (
+              <li key={c.hex} className="palette__item">
+                <span className="palette__swatch" style={{ background: c.hex }} />
+                <strong>{c.name}</strong>
+                <code>{c.hex}</code>
+                <span className="palette__use">{c.use}</span>
+                <span className="palette__ratio">
+                  {c.on === DARK ? 'sobre Ciprés' : 'sobre Marfil'} {contrast(c.hex, c.on).toFixed(1)}:1
+                </span>
+              </li>
+            ))}
           </ul>
         </article>
 

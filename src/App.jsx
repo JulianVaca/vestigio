@@ -16,6 +16,8 @@ const About = lazy(() => import('./pages/About.jsx'))
 const Contact = lazy(() => import('./pages/Contact.jsx'))
 const Museum = lazy(() => import('./pages/Museum.jsx'))
 const Brand = lazy(() => import('./pages/Brand.jsx'))
+const Sneakers = lazy(() => import('./pages/Sneakers.jsx'))
+const SneakerDetail = lazy(() => import('./pages/SneakerDetail.jsx'))
 const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 
 export default function App() {
@@ -41,6 +43,8 @@ export default function App() {
               <Route path="/contacto" element={<Contact />} />
               <Route path="/museo" element={<Museum />} />
               <Route path="/marca" element={<Brand />} />
+              <Route path="/sneakers" element={<Sneakers />} />
+              <Route path="/sneakers/:id" element={<SneakerDetail />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

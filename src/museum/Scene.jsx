@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
@@ -27,7 +27,7 @@ const sharedConeGeo = new THREE.ConeGeometry(1.18, 3.2, 20, 1, true)
 const sharedShadowGeo = new THREE.PlaneGeometry(2.2, 2.2)
 const sharedPedestalGeo = new THREE.BoxGeometry(0.88, 1.02, 0.88)
 
-const sharedBronzeMat = new THREE.MeshStandardMaterial({ color: '#9A7438', roughness: 0.32, metalness: 0.72 })
+const sharedBronzeMat = new THREE.MeshStandardMaterial({ color: '#B8964F', roughness: 0.28, metalness: 0.8 })
 const sharedDarkBronzeMat = new THREE.MeshStandardMaterial({ color: '#4A3B24', roughness: 0.4, metalness: 0.58 })
 const sharedTravertineMat = new THREE.MeshLambertMaterial({ color: '#E6DFD1' })
 const sharedCompanionMat = new THREE.MeshLambertMaterial({ color: '#D6CFC0' })
@@ -39,20 +39,28 @@ const poolTex = radialTexture('rgba(255, 248, 230, 0.55)', 'rgba(255, 248, 230, 
 const shadowTex = radialTexture('rgba(35, 32, 26, 0.32)', 'rgba(35, 32, 26, 0)')
 const sharedShadowMat = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })
 
+// FrontSide (antes DoubleSide): mitad de sobre-dibujo aditivo por cono, clave en pantallas grandes.
+// Compatible con InstancedMesh: aplica instanceMatrix cuando three define USE_INSTANCING.
 const coneMaterial = new THREE.ShaderMaterial({
   transparent: true,
   depthWrite: false,
   blending: THREE.AdditiveBlending,
-  side: THREE.DoubleSide,
-  uniforms: { uColor: { value: new THREE.Color('#fff6e0') }, uOpacity: { value: 0.06 } },
+  side: THREE.FrontSide,
+  uniforms: { uColor: { value: new THREE.Color('#fff6e0') }, uOpacity: { value: 0.075 } },
   vertexShader: /* glsl */ `
     varying float vH;
     varying vec3 vN;
     varying vec3 vView;
     void main() {
       vH = uv.y;
-      vec4 mv = modelViewMatrix * vec4(position, 1.0);
-      vN = normalize(normalMatrix * normal);
+      vec4 local = vec4(position, 1.0);
+      vec3 n = normal;
+      #ifdef USE_INSTANCING
+        local = instanceMatrix * local;
+        n = mat3(instanceMatrix) * n;
+      #endif
+      vec4 mv = modelViewMatrix * local;
+      vN = normalize(normalMatrix * n);
       vView = normalize(-mv.xyz);
       gl_Position = projectionMatrix * mv;
     }`,
@@ -70,21 +78,28 @@ const coneMaterial = new THREE.ShaderMaterial({
 })
 
 /* ───────────────────────────── Escena completa optimizada ───────────────────────────── */
-export default function Scene({ reduced, hoveredId, onHover, onSelect, onFloorClick, onNavigate, lowPower, onReady }) {
+/**
+ * memo(): el HUD (hover, sala, panel) re-renderiza MuseumExperience muchas veces por segundo
+ * al mover el mouse en PC. Antes cada render volvía a reconciliar toda la escena y, como
+ * `onReady` cambiaba de identidad, regeneraba el mapa PMREM completo en cada hover.
+ */
+const Scene = memo(function Scene({ reduced, onHover, onSelect, onFloorClick, onNavigate, lowPower, onReady }) {
   const { gl, scene } = useThree()
+  const readyRef = useRef(onReady)
+  readyRef.current = onReady
 
   useEffect(() => {
     const pmrem = new THREE.PMREMGenerator(gl)
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     scene.environment = env
     scene.environmentIntensity = 0.3
-    onReady?.()
+    readyRef.current?.()
     return () => {
       scene.environment = null
       env.dispose()
       pmrem.dispose()
     }
-  }, [gl, scene, onReady])
+  }, [gl, scene])
 
   // Cargamos las variantes -sm.webp (420x560) para las 30 obras en 3D: carga instantánea y 4x menos VRAM en PC
   const textures = useLoader(
@@ -113,15 +128,11 @@ export default function Scene({ reduced, hoveredId, onHover, onSelect, onFloorCl
       <BotanicalGarden />
       <WallTexts onNavigate={onNavigate} />
 
+      {/* Herrajes estáticos de los 30 racks: ~11 draw calls en total (antes ~360) */}
+      <InstancedRackHardware />
+
       {exhibits.map((e, i) => (
-        <Artwork
-          key={e.product.id}
-          exhibit={e}
-          texture={textures[i]}
-          hovered={hoveredId === e.product.id}
-          onHover={onHover}
-          onSelect={onSelect}
-        />
+        <Artwork key={e.product.id} exhibit={e} texture={textures[i]} onHover={onHover} onSelect={onSelect} />
       ))}
 
       <AnforaTextil reduced={reduced} />
@@ -131,8 +142,82 @@ export default function Scene({ reduced, hoveredId, onHover, onSelect, onFloorCl
       <BrutalistSphere z={roomCenter(3)} reduced={reduced} />
       <WingedPedestalRelic z={roomCenter(4)} reduced={reduced} />
 
-      {!reduced && <Dust count={lowPower ? 140 : 280} />}
+      {!reduced && <Dust count={lowPower ? 140 : 220} />}
     </>
+  )
+})
+
+export default Scene
+
+/* ───────────────────── Herrajes de racks instanciados (1 draw call por pieza) ───────────────────── */
+const RACK_PARTS = [
+  // [geometría, material, [[posición local], [rotación local]]...]
+  { geo: sharedRackPlinthGeo, mat: sharedTravertineMat, items: [[[0, -1.97, 0.36], [0, 0, 0]]] },
+  {
+    geo: sharedRackPostGeo,
+    mat: sharedBronzeMat,
+    items: [
+      [[-0.88, -0.4, 0.36], [0, 0, 0]],
+      [[0.88, -0.4, 0.36], [0, 0, 0]],
+    ],
+  },
+  { geo: sharedRackBarGeo, mat: sharedBronzeMat, items: [[[0, 1.15, 0.36], [0, 0, Math.PI / 2]]] },
+  {
+    geo: sharedRackBracketGeo,
+    mat: sharedDarkBronzeMat,
+    items: [
+      [[-0.88, 1.15, 0.18], [Math.PI / 2, 0, 0]],
+      [[0.88, 1.15, 0.18], [Math.PI / 2, 0, 0]],
+    ],
+  },
+  // Prendas secundarias colgadas al fondo del rack (volumen de tienda)
+  { geo: sharedFrameGeo, mat: sharedCompanionMat, items: [[[-0.12, -0.02, 0.16], [0, 0, 0]]] },
+  { geo: sharedFrameGeo, mat: sharedTravertineMat, items: [[[0.12, -0.01, 0.24], [0, 0, 0]]] },
+  // Atril de la etiqueta
+  { geo: sharedPlaquePostGeo, mat: sharedDarkBronzeMat, items: [[[1.28, -1.42, 0.36], [0, 0, 0]]] },
+  // Cono de luz y lámpara cenital
+  { geo: sharedConeGeo, mat: coneMaterial, items: [[[0, 1.4, 0.95], [0.32, 0, 0]]] },
+  { geo: sharedLampGeo, mat: sharedLampMat, items: [[[0, HALL.height - 2.0 - 0.01, 1.45], [Math.PI / 2, 0, 0]]] },
+]
+
+function InstancedRackHardware() {
+  const refs = useRef([])
+
+  useLayoutEffect(() => {
+    const parent = new THREE.Object3D()
+    const child = new THREE.Object3D()
+    RACK_PARTS.forEach((part, pi) => {
+      const mesh = refs.current[pi]
+      if (!mesh) return
+      let i = 0
+      exhibits.forEach((e) => {
+        parent.position.set(e.position[0], e.position[1], e.position[2])
+        parent.rotation.set(0, e.rotationY, 0)
+        parent.updateMatrix()
+        part.items.forEach(([p, r]) => {
+          child.position.set(p[0], p[1], p[2])
+          child.rotation.set(r[0], r[1], r[2])
+          child.updateMatrix()
+          child.matrix.premultiply(parent.matrix)
+          mesh.setMatrixAt(i++, child.matrix)
+        })
+      })
+      mesh.instanceMatrix.needsUpdate = true
+      mesh.computeBoundingSphere()
+    })
+  }, [])
+
+  return (
+    <group>
+      {RACK_PARTS.map((part, pi) => (
+        <instancedMesh
+          key={pi}
+          ref={(m) => (refs.current[pi] = m)}
+          args={[part.geo, part.mat, exhibits.length * part.items.length]}
+          frustumCulled={false}
+        />
+      ))}
+    </group>
   )
 }
 
@@ -452,14 +537,17 @@ function CatalogLabel() {
 }
 
 /* ───────────────────── Racks 3D de Boutique (Percheros Arquitectónicos de Bronce y Travertino) ───────────────────── */
-function Artwork({ exhibit, texture, hovered, onHover, onSelect }) {
+const Artwork = memo(function Artwork({ exhibit, texture, onHover, onSelect }) {
   const { product, position, rotationY } = exhibit
   const group = useRef()
   const pool = useRef()
+  // Hover local en ref: ni React ni las otras 29 obras se enteran del cambio
+  const hoverRef = useRef(false)
   const plaque = useMemo(() => plaqueTexture(product, formatPrice(product.price)), [product])
 
   useFrame((_, dt) => {
     if (!group.current) return
+    const hovered = hoverRef.current
     const targetScale = hovered ? 1.04 : 1
     const targetZ = hovered ? 0.52 : 0.36
     const targetRotY = hovered ? 0.065 : 0
@@ -491,23 +579,7 @@ function Artwork({ exhibit, texture, hovered, onHover, onSelect }) {
         />
       </mesh>
 
-      {/* Base de mármol travertino del perchero en el piso */}
-      <mesh position={[0, -1.97, 0.36]} geometry={sharedRackPlinthGeo} material={sharedTravertineMat} />
-
-      {/* Columnas verticales de bronce cepillado del rack */}
-      <mesh position={[-0.88, -0.4, 0.36]} geometry={sharedRackPostGeo} material={sharedBronzeMat} />
-      <mesh position={[0.88, -0.4, 0.36]} geometry={sharedRackPostGeo} material={sharedBronzeMat} />
-
-      {/* Barra horizontal superior del perchero de tienda */}
-      <mesh position={[0, 1.15, 0.36]} rotation-z={Math.PI / 2} geometry={sharedRackBarGeo} material={sharedBronzeMat} />
-
-      {/* Soportes de anclaje al muro */}
-      <mesh position={[-0.88, 1.15, 0.18]} rotation-x={Math.PI / 2} geometry={sharedRackBracketGeo} material={sharedDarkBronzeMat} />
-      <mesh position={[0.88, 1.15, 0.18]} rotation-x={Math.PI / 2} geometry={sharedRackBracketGeo} material={sharedDarkBronzeMat} />
-
-      {/* Prendas secundarias colgadas al fondo del rack para dar volumen de tienda */}
-      <mesh position={[-0.12, -0.02, 0.16]} geometry={sharedFrameGeo} material={sharedCompanionMat} />
-      <mesh position={[0.12, -0.01, 0.24]} geometry={sharedFrameGeo} material={sharedTravertineMat} />
+      {/* Base, postes, barra, soportes y prendas de fondo: ver <InstancedRackHardware /> */}
 
       {/* Prenda principal colgada en su percha interactiva de bronce */}
       <group ref={group} position={[0, 0, 0.36]}>
@@ -525,10 +597,12 @@ function Artwork({ exhibit, texture, hovered, onHover, onSelect }) {
           geometry={sharedArtGeo}
           onPointerOver={(e) => {
             e.stopPropagation()
+            hoverRef.current = true
             onHover(product.id)
             document.body.style.cursor = 'pointer'
           }}
           onPointerOut={() => {
+            hoverRef.current = false
             onHover(null)
             document.body.style.cursor = ''
           }}
@@ -542,17 +616,13 @@ function Artwork({ exhibit, texture, hovered, onHover, onSelect }) {
         </mesh>
       </group>
 
-      {/* Atril lateral de bronce con la etiqueta de precio y tallas */}
-      <mesh position={[1.28, -1.42, 0.36]} geometry={sharedPlaquePostGeo} material={sharedDarkBronzeMat} />
+      {/* Etiqueta de precio y tallas sobre el atril (el poste está instanciado) */}
       <mesh position={[1.28, -0.78, 0.38]} geometry={sharedPlaqueGeo}>
         <meshBasicMaterial map={plaque} toneMapped={false} />
       </mesh>
-
-      <mesh position={[0, 1.4, 0.95]} rotation-x={0.32} geometry={sharedConeGeo} material={coneMaterial} />
-      <mesh position={[0, HALL.height - position[1] - 0.01, 1.45]} rotation-x={Math.PI / 2} geometry={sharedLampGeo} material={sharedLampMat} />
     </group>
   )
-}
+})
 
 /* ───────────────────────────── Esculturas Centrales (Vestíbulo + 5 Salas) ───────────────────────────── */
 function Pedestal({ z, x = 0, children }) {

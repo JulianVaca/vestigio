@@ -11,10 +11,13 @@ const STORAGE_KEY = 'vestigio-cart'
 function reducer(state, action) {
   switch (action.type) {
     case 'add': {
-      const { id, size, qty = 1 } = action
+      const { id, size, qty = 1, price } = action
       const found = state.find((l) => l.id === id && l.size === size)
-      if (found) return state.map((l) => (l === found ? { ...l, qty: Math.min(9, l.qty + qty) } : l))
-      return [...state, { id, size, qty }]
+      if (found)
+        return state.map((l) =>
+          l === found ? { ...l, qty: Math.min(9, l.qty + qty), ...(price ? { price } : {}) } : l,
+        )
+      return [...state, { id, size, qty, ...(price ? { price } : {}) }]
     }
     case 'setQty':
       return state
@@ -52,16 +55,20 @@ export function CartProvider({ children }) {
     return () => clearTimeout(t)
   }, [toast])
 
-  const add = useCallback((id, size, qty = 1) => {
-    dispatch({ type: 'add', id, size, qty })
+  // `price` opcional: precio de mercado (sneakers) distinto al precio de lista
+  const add = useCallback((id, size, qty = 1, price) => {
+    dispatch({ type: 'add', id, size, qty, price })
     const p = getProduct(id)
     setToast({ key: Date.now(), product: p, size })
   }, [])
 
   const value = useMemo(() => {
-    const items = lines.map((l) => ({ ...l, product: getProduct(l.id) }))
+    const items = lines.map((l) => {
+      const product = getProduct(l.id)
+      return { ...l, product, unitPrice: l.price ?? product.price }
+    })
     const count = lines.reduce((s, l) => s + l.qty, 0)
-    const subtotal = items.reduce((s, l) => s + l.qty * l.product.price, 0)
+    const subtotal = items.reduce((s, l) => s + l.qty * l.unitPrice, 0)
     return {
       items,
       count,

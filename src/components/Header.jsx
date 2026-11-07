@@ -11,6 +11,7 @@ const links = [
   { to: '/', label: 'Inicio' },
   { to: '/museo', label: 'Museo 3D' },
   { to: '/catalogo', label: 'Catálogo' },
+  { to: '/sneakers', label: 'Sneakers' },
   { to: '/nosotros', label: 'Nosotros' },
   { to: '/contacto', label: 'Contacto' },
 ]
@@ -56,9 +57,13 @@ export default function Header({ overlay }) {
     }
   }
 
+  // Páginas con hero oscuro (ciprés): header claro hasta hacer scroll
+  const onDarkHero = location.pathname === '/' || location.pathname === '/sneakers'
+  const solid = scrolled || overlay
+
   return (
     <header
-      className={`header ${scrolled || overlay ? 'header--solid' : ''} ${hidden && !open ? 'header--hidden' : ''} ${overlay ? 'header--overlay' : ''}`}
+      className={`header ${solid ? 'header--solid' : ''} ${onDarkHero && !solid && !open ? 'header--on-dark' : ''} ${hidden && !open ? 'header--hidden' : ''} ${overlay ? 'header--overlay' : ''}`}
     >
       <div className="header__inner container">
         <Link to="/" className="header__logo" aria-label="VESTIGIO, ir al inicio">

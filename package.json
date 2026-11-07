@@ -1,7 +1,7 @@
 {
   "name": "vestigio",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.2.0",
   "type": "module",
   "description": "VESTIGIO — Archivo de streetwear e historia presentado en un museo 3D interactivo de granito griego y botánica.",
   "scripts": {

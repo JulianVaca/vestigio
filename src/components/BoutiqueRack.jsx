@@ -1,296 +1,269 @@
-import { useState, useRef, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { formatPrice, rooms } from '../data/products.js'
 import { useCart } from '../context/CartContext.jsx'
 import { useMotionPref } from '../context/MotionContext.jsx'
 import { flyToCart } from '../lib/flyToCart.js'
+import SizeSelector from './SizeSelector.jsx'
 import { ArrowIcon, ArrowLeftIcon, CheckIcon, CubeIcon, PlusIcon } from './Icons.jsx'
 
-/**
- * Percha arquitectónica en bronce cepillado y madera de olivo.
- */
-function HangerGraphic({ active }) {
+/** Percha de bronce dorado: gancho + hombros + placa del atelier. */
+function Hanger() {
   return (
-    <svg
-      className={`rack__hanger-svg ${active ? 'is-active' : ''}`}
-      viewBox="0 0 180 62"
-      fill="none"
-      aria-hidden="true"
-    >
-      {/* Argolla que abraza el tubo del rack */}
-      <circle cx="90" cy="8" r="5.5" stroke="currentColor" strokeWidth="2.4" />
-      {/* Gancho de bronce */}
-      <path
-        d="M90 13.5 C90 21, 90 25, 90 30"
-        stroke="currentColor"
-        strokeWidth="2.6"
-        strokeLinecap="round"
-      />
-      {/* Hombros de la percha de tienda */}
-      <path
-        d="M16 56 C38 34, 68 29, 90 29 C112 29, 142 34, 164 56"
-        stroke="currentColor"
-        strokeWidth="4.5"
-        strokeLinecap="round"
-      />
-      {/* Placa central del atelier */}
-      <rect x="74" y="25" width="32" height="9" rx="2" fill="currentColor" />
+    <svg className="vrack__hanger" viewBox="0 0 180 64" fill="none" aria-hidden="true">
+      <path d="M90 31 V19 C90 14 94 10.5 98.5 10.5 C103 10.5 106 14 106 18" stroke="url(#vrack-gold)" strokeWidth="3" strokeLinecap="round" />
+      <path d="M14 58 C38 36, 68 31, 90 31 C112 31, 142 36, 166 58" stroke="url(#vrack-gold)" strokeWidth="5" strokeLinecap="round" />
+      <rect x="76" y="27" width="28" height="8" rx="2" fill="url(#vrack-gold)" />
     </svg>
   )
 }
 
 /**
- * Rack interactivo de tienda (Perchero de Boutique).
- * Permite deslizar prendas colgadas sobre una barra metálica como en una boutique física.
+ * Rack de boutique física.
+ * Las prendas cuelgan DE LADO sobre una barra dorada, como en un perchero real de tienda;
+ * al pasar el cursor (o enfocar con teclado) la percha gira y la prenda queda DE FRENTE.
+ * Clic / toque fija la prenda y abre su ficha de compra rápida debajo.
  */
 export default function BoutiqueRack({ items, title, subtitle }) {
-  const [index, setIndex] = useState(0)
-  const [selectedSize, setSelectedSize] = useState(null)
+  const [active, setActive] = useState(0)
+  const [size, setSize] = useState(null)
   const [added, setAdded] = useState(false)
   const [sizeError, setSizeError] = useState(false)
-  const activeImgRef = useRef(null)
+  const railRef = useRef(null)
+  const drag = useRef({ down: false, x: 0, left: 0, moved: 0 })
   const { add } = useCart()
   const { reduced } = useMotionPref()
 
-  // Mantener el índice dentro de rango cuando cambia el filtro
   useEffect(() => {
-    setIndex(0)
-    setSelectedSize(null)
+    setActive(0)
+    setSize(null)
+    if (railRef.current) railRef.current.scrollLeft = 0
   }, [items])
 
+  /** Centra la percha `idx` en el riel. Calcula la posición con las medidas en reposo para no depender de la transición. */
+  const centerOn = useCallback(
+    (idx, smooth = true) => {
+      const rail = railRef.current
+      if (!rail) return
+      const cs = getComputedStyle(rail)
+      const slot = parseFloat(cs.getPropertyValue('--slot')) || 72
+      const front = parseFloat(cs.getPropertyValue('--front')) || 260
+      const gap = parseFloat(cs.columnGap) || 0
+      const padL = parseFloat(cs.paddingLeft) || 0
+      const left = padL + idx * (slot + gap) + front / 2 - rail.clientWidth / 2
+      rail.scrollTo({ left, behavior: smooth && !reduced ? 'smooth' : 'auto' })
+    },
+    [reduced],
+  )
+
   if (!items || items.length === 0) return null
+  const safe = Math.min(active, items.length - 1)
+  const current = items[safe]
 
-  const safeIndex = Math.min(index, items.length - 1)
-  const current = items[safeIndex]
-
-  const goPrev = () => {
-    setIndex((i) => (i - 1 + items.length) % items.length)
-    setSelectedSize(null)
+  const select = (idx, { focus = false } = {}) => {
+    const i = (idx + items.length) % items.length
+    setActive(i)
+    setSize(null)
     setSizeError(false)
-  }
-
-  const goNext = () => {
-    setIndex((i) => (i + 1) % items.length)
-    setSelectedSize(null)
-    setSizeError(false)
+    centerOn(i)
+    if (focus) railRef.current?.querySelectorAll('.vrack__garment')[i]?.focus({ preventScroll: true })
   }
 
   const handleAdd = () => {
-    const sizeToUse = selectedSize || current.sizes[0]
-    if (!selectedSize && current.sizes.length > 1) {
+    if (!size) {
       setSizeError(true)
-      setTimeout(() => setSizeError(false), 650)
+      setTimeout(() => setSizeError(false), 700)
       return
     }
-    flyToCart(activeImgRef.current, reduced)
-    add(current.id, sizeToUse, 1)
+    const img = railRef.current?.querySelectorAll('.vrack__face img')[safe]
+    flyToCart(img, reduced)
+    add(current.id, size, 1)
     setAdded(true)
     setTimeout(() => setAdded(false), 1600)
   }
 
-  return (
-    <section className="rack" aria-label={title || 'Rack interactivo de prendas'}>
-      <div className="rack__header">
-        <div>
-          <p className="eyebrow">Boutique Interactiva · Desliza las perchas</p>
-          <h2 className="h3 rack__title">{title || 'Perchero Principal del Atelier'}</h2>
-          {subtitle && <p className="rack__subtitle">{subtitle}</p>}
-        </div>
+  // Arrastre con mouse para recorrer el riel (en táctil se usa el scroll nativo)
+  const onPointerDown = (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return
+    drag.current = { down: true, x: e.clientX, left: railRef.current.scrollLeft, moved: 0 }
+  }
+  const onPointerMove = (e) => {
+    const d = drag.current
+    if (!d.down) return
+    const dx = e.clientX - d.x
+    d.moved = Math.max(d.moved, Math.abs(dx))
+    if (d.moved > 4) {
+      railRef.current.scrollLeft = d.left - dx
+      railRef.current.classList.add('is-dragging')
+    }
+  }
+  const endDrag = () => {
+    drag.current.down = false
+    railRef.current?.classList.remove('is-dragging')
+  }
 
-        <div className="rack__controls">
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={goPrev}
-            aria-label="Prenda anterior en el rack"
-          >
+  const onKeyDown = (e) => {
+    if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      select(safe + 1, { focus: true })
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      select(safe - 1, { focus: true })
+    }
+  }
+
+  return (
+    <section className="vrack" aria-label={title || 'Rack interactivo de prendas'}>
+      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
+        <defs>
+          <linearGradient id="vrack-gold" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#8a6a2c" />
+            <stop offset="0.45" stopColor="#e2c98f" />
+            <stop offset="0.7" stopColor="#a8853f" />
+            <stop offset="1" stopColor="#d9bf86" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <header className="vrack__header">
+        <div>
+          <p className="eyebrow">Boutique · Pasa el cursor o toca una percha</p>
+          <h2 className="vrack__title">{title || 'Perchero principal del atelier'}</h2>
+          {subtitle && <p className="vrack__subtitle">{subtitle}</p>}
+        </div>
+        <div className="vrack__controls">
+          <button type="button" className="icon-btn" onClick={() => select(safe - 1)} aria-label="Prenda anterior">
             <ArrowLeftIcon />
           </button>
-          <span className="rack__counter">
-            {String(safeIndex + 1).padStart(2, '0')} / {String(items.length).padStart(2, '0')}
+          <span className="vrack__counter" aria-live="polite">
+            {String(safe + 1).padStart(2, '0')} <i>/</i> {String(items.length).padStart(2, '0')}
           </span>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={goNext}
-            aria-label="Prenda siguiente en el rack"
-          >
+          <button type="button" className="icon-btn" onClick={() => select(safe + 1)} aria-label="Prenda siguiente">
             <ArrowIcon />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Estructura arquitectónica del perchero: barra de bronce + soportes */}
-      <div className="rack__frame">
-        <div className="rack__post rack__post--left" aria-hidden="true" />
-        <div className="rack__post rack__post--right" aria-hidden="true" />
-
-        {/* Barra cilíndrica superior con muescas interactivas */}
-        <div className="rack__bar" role="tablist" aria-label="Posiciones del perchero">
-          <div className="rack__bar-rod" aria-hidden="true" />
-          <div className="rack__bar-hooks">
-            {items.map((item, idx) => {
-              const isCurrent = idx === safeIndex
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={isCurrent}
-                  aria-label={`Deslizar rack a ${item.name}`}
-                  className={`rack__bar-notch ${isCurrent ? 'is-active' : ''}`}
-                  onClick={() => {
-                    setIndex(idx)
-                    setSelectedSize(null)
-                  }}
-                >
-                  <span className="rack__bar-ring" />
-                </button>
-              )
-            })}
-          </div>
+      <div className="vrack__stage">
+        <div className="vrack__rod" aria-hidden="true">
+          <span className="vrack__finial vrack__finial--l" />
+          <span className="vrack__finial vrack__finial--r" />
         </div>
 
-        {/* Escenario de prendas colgadas con física de perchero */}
-        <motion.div
-          className="rack__stage"
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.15}
-          onDragEnd={(_, info) => {
-            if (info.offset.x < -45) goNext()
-            else if (info.offset.x > 45) goPrev()
-          }}
+        <ul
+          ref={railRef}
+          className="vrack__rail"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={endDrag}
+          onPointerLeave={endDrag}
+          onKeyDown={onKeyDown}
+          aria-label="Prendas colgadas en el rack"
         >
           {items.map((item, idx) => {
-            // Distancia circular o lineal respecto a la prenda activa
-            const offset = idx - safeIndex
-            if (Math.abs(offset) > 3) return null
-
-            const isCenter = offset === 0
-            const abs = Math.abs(offset)
-            const xSpread = offset * 175
-            const rotateY = offset === 0 ? 0 : offset < 0 ? 34 : -34
-            const rotateZ = offset * 1.4
-            const scale = isCenter ? 1 : Math.max(0.72, 0.9 - abs * 0.08)
-            const opacity = isCenter ? 1 : Math.max(0.35, 0.85 - abs * 0.2)
-            const zIndex = 20 - abs
-
+            const isActive = idx === safe
             return (
-              <motion.div
-                key={item.id}
-                className={`rack__item ${isCenter ? 'is-center' : ''}`}
-                style={{ zIndex }}
-                initial={false}
-                animate={{
-                  x: xSpread,
-                  scale,
-                  opacity,
-                  rotateY: reduced ? 0 : rotateY,
-                  rotateZ: reduced ? 0 : rotateZ,
-                }}
-                transition={{
-                  type: 'spring',
-                  stiffness: 290,
-                  damping: 28,
-                }}
-                onClick={() => {
-                  if (!isCenter) {
-                    setIndex(idx)
-                    setSelectedSize(null)
-                  }
-                }}
-              >
-                <HangerGraphic active={isCenter} />
-                <div className="rack__garment-card">
-                  <img
-                    ref={isCenter ? activeImgRef : null}
-                    src={isCenter ? item.img : item.img.replace('.webp', '-sm.webp')}
-                    alt={item.name}
-                    width="420"
-                    height="560"
-                    draggable={false}
-                  />
-                  <span className="rack__garment-badge">{item.category}</span>
-                </div>
-              </motion.div>
+              <li key={item.id} className={`vrack__slot ${isActive ? 'is-active' : ''}`} style={{ '--hex': item.hex }}>
+                <button
+                  type="button"
+                  className="vrack__garment"
+                  aria-pressed={isActive}
+                  aria-label={`${item.name}, ${formatPrice(item.price)}`}
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => {
+                    if (drag.current.moved > 4) return
+                    select(idx)
+                  }}
+                >
+                  <Hanger />
+                  <span className="vrack__body">
+                    <span className="vrack__face">
+                      <img
+                        src={item.img.replace('.webp', '-sm.webp')}
+                        alt=""
+                        width="420"
+                        height="560"
+                        loading={idx < 8 ? 'eager' : 'lazy'}
+                        decoding="async"
+                        draggable={false}
+                      />
+                      <span className="vrack__shade" />
+                    </span>
+                    <span className="vrack__edge" />
+                  </span>
+                  <span className="vrack__tag">
+                    <span className="vrack__tag-name">{item.name}</span>
+                    <span className="vrack__tag-price">{formatPrice(item.price)}</span>
+                  </span>
+                </button>
+              </li>
             )
           })}
-        </motion.div>
-
-        {/* Base de piedra travertino del perchero con panel de compra rápida */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={current.id}
-            className="rack__plinth"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22 }}
-          >
-            <div className="rack__plinth-info">
-              <p className="eyebrow">
-                {rooms[current.room]?.name} · {current.brand}
-              </p>
-              <h3 className="rack__plinth-name">
-                <Link to={`/producto/${current.id}`}>{current.name}</Link>
-              </h3>
-              <p className="rack__plinth-meta">
-                <span className="swatch" style={{ background: current.hex }} aria-hidden="true" />
-                <span>{current.color}</span>
-                <span aria-hidden="true">·</span>
-                <strong className="rack__plinth-price">{formatPrice(current.price)}</strong>
-              </p>
-              <p className="rack__plinth-desc">{current.description}</p>
-            </div>
-
-            <div className="rack__plinth-actions">
-              <div className={`rack__sizes ${sizeError ? 'is-error' : ''}`}>
-                <span className="rack__sizes-label">
-                  Talla en percha:
-                  {sizeError && <em className="rack__sizes-alert"> · Elige una talla</em>}
-                </span>
-                <div className="rack__sizes-list" role="group" aria-label="Seleccionar talla">
-                  {current.sizes.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      className={`rack__size-pill ${selectedSize === s ? 'is-active' : ''}`}
-                      onClick={() => {
-                        setSelectedSize(s)
-                        setSizeError(false)
-                      }}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rack__cta-row">
-                <button type="button" className="btn btn--primary" onClick={handleAdd}>
-                  {added ? (
-                    <>
-                      <CheckIcon width={17} height={17} /> Añadido al carrito
-                    </>
-                  ) : (
-                    <>
-                      <PlusIcon width={17} height={17} /> Descolgar al carrito
-                    </>
-                  )}
-                </button>
-                <Link to={`/producto/${current.id}`} className="btn btn--ghost">
-                  Ver prenda en detalle
-                </Link>
-                <Link to={`/museo?obra=${current.id}`} className="btn btn--ghost" title="Ver en el rack 3D del museo">
-                  <CubeIcon width={16} height={16} /> Rack 3D
-                </Link>
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
+        </ul>
+        <div className="vrack__floor" aria-hidden="true" />
       </div>
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={current.id}
+          className="vrack__plinth"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="vrack__info">
+            <p className="eyebrow">
+              {rooms[current.room]?.name} · {current.category}
+            </p>
+            <h3 className="vrack__name">
+              <Link to={`/producto/${current.id}`}>{current.name}</Link>
+            </h3>
+            <p className="vrack__meta">
+              <span className="swatch" style={{ background: current.hex }} aria-hidden="true" />
+              {current.color}
+            </p>
+            <p className="vrack__price">{formatPrice(current.price)}</p>
+            <p className="vrack__desc">{current.description}</p>
+          </div>
+
+          <div className="vrack__buy">
+            <SizeSelector
+              product={current}
+              value={size}
+              onChange={(s) => {
+                setSize(s)
+                setSizeError(false)
+              }}
+              error={sizeError}
+              compact
+              reduced={reduced}
+              name={`rack-size-${current.id}`}
+              layoutKey={`rack-pill-${title}`}
+            />
+            <div className="vrack__cta">
+              <button type="button" className="btn btn--primary" onClick={handleAdd}>
+                {added ? (
+                  <>
+                    <CheckIcon width={17} height={17} /> Añadido
+                  </>
+                ) : (
+                  <>
+                    <PlusIcon width={17} height={17} /> Descolgar al carrito
+                  </>
+                )}
+              </button>
+              <Link to={`/producto/${current.id}`} className="btn btn--ghost">
+                Ver detalle
+              </Link>
+              <Link to={`/museo?obra=${current.id}`} className="btn btn--ghost" title="Ver en el rack 3D del museo">
+                <CubeIcon width={16} height={16} /> 3D
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
     </section>
   )
 }

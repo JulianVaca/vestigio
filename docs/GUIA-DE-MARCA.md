@@ -6,14 +6,18 @@
 ## Logotipo
 Una **V** construida como un pórtico dórico partido, apoyada sobre un estilóbato en verde laurel botánico + palabra VESTIGIO en Fraunces con tracking amplio (0.24 em).
 
-## Paleta Griega: Granito & Plantas
+## Paleta «Helénico Botánico Áureo» (v2.2)
+Dos registros: **día** (marfil + laurel) para comprar con calma, y **noche** (ciprés + oro) para los momentos de lujo: hero, mercado de sneakers y fichas destacadas.
+
 | Color | HEX | Uso | Contraste |
 |---|---|---|---|
-| Granito Abisal | `#121514` | Fondo principal del pórtico y salas | 15.8:1 con Mármol Pentélico |
-| Mármol Pentélico | `#F2EFE9` | Texto principal y relieves claros | 15.8:1 sobre Granito Abisal |
-| Laurel Botánico | `#5E9E7E` | Acción principal, plantas y acentos | 5.9:1 sobre Granito Abisal |
-| Bronce de Delfos | `#C8B07A` | Precios, marquillas y foco de teclado | 8.5:1 sobre Granito Abisal |
-| Ceniza de Olivo | `#A3ADA6` | Texto secundario y piedra erosionada | 7.6:1 sobre Granito Abisal |
-| Granito Labrado | `#242B28` | Tarjetas, pedestales y paneles | — |
+| Marfil Pentélico | `#F5F1E8` | Fondo principal | 17:1 con Ciprés |
+| Ciprés Nocturno | `#0F1A14` | Hero, mercado de sneakers, secciones de lujo | 17:1 con Marfil |
+| Laurel Profundo | `#23432F` | Acción principal, botánica | 9,7:1 sobre Marfil |
+| Oro Antiguo | `#B8964F` | **Sólo ornamento**: herrajes, grecas, bordes, perchas | No se usa para texto |
+| Oro Claro | `#DCC48E` | Texto y cifras sobre Ciprés | 10,4:1 sobre Ciprés |
+| Oro Antiguo Texto | `#7A5A22` | Precios y etiquetas doradas sobre Marfil | 5,6:1 sobre Marfil (AA) |
+| Basalto | `#161917` | Tipografía principal | 17:1 sobre Marfil |
+| Piedra de Olivo | `#50574F` | Texto secundario | 6,9:1 sobre Marfil |
 
-Todos los textos cumplen **WCAG AA y AAA**. La página `/marca` calcula los contrastes en vivo.
+**Regla del oro:** el oro se usa como joyería: poco, en líneas y herrajes, nunca como fondo de párrafos. Si un texto necesita ser dorado sobre marfil, se usa Oro Antiguo Texto. La página `/marca` calcula los contrastes en vivo.

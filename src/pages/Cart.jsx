@@ -81,10 +81,10 @@ export default function Cart() {
                     <p className="cart-line__meta">
                       {l.product.brand} · {l.product.color} · Talla {l.size}
                     </p>
-                    <p className="cart-line__unit">{formatPrice(l.product.price)} c/u</p>
+                    <p className="cart-line__unit">{formatPrice(l.unitPrice)} c/u</p>
                   </div>
                   <QtyStepper value={l.qty} min={0} onChange={(q) => setQty(l.id, l.size, q)} label={`Cantidad de ${l.product.name}`} />
-                  <p className="cart-line__total">{formatPrice(l.qty * l.product.price)}</p>
+                  <p className="cart-line__total">{formatPrice(l.qty * l.unitPrice)}</p>
                   <button className="icon-btn cart-line__remove" onClick={() => remove(l.id, l.size)} aria-label={`Quitar ${l.product.name}`}>
                     <TrashIcon width={18} height={18} />
                   </button>

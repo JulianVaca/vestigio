@@ -7,7 +7,8 @@ import { useMotionPref } from '../context/MotionContext.jsx'
 import { flyToCart } from '../lib/flyToCart.js'
 import ProductCard from '../components/ProductCard.jsx'
 import QtyStepper from '../components/QtyStepper.jsx'
-import { CheckIcon, CubeIcon, PlusIcon, ArrowLeftIcon } from '../components/Icons.jsx'
+import SizeSelector from '../components/SizeSelector.jsx'
+import { CheckIcon, CubeIcon, PlusIcon, ArrowLeftIcon, TagIcon } from '../components/Icons.jsx'
 import { useScrollAnimations } from '../hooks/useScrollAnimations.js'
 import NotFound from './NotFound.jsx'
 
@@ -122,46 +123,16 @@ function ProductView({ product }) {
             <strong>{product.color}</strong>
           </p>
 
-          <fieldset className={`sizes ${state === 'error' ? 'is-error' : ''}`}>
-            <legend>
-              Talla disponible{' '}
-              {state === 'error' && (
-                <span className="sizes__hint" role="alert">
-                  · Selecciona una talla
-                </span>
-              )}
-            </legend>
-            <motion.div
-              className="sizes__row"
-              animate={state === 'error' && !reduced ? { x: [0, -8, 8, -5, 5, 0] } : { x: 0 }}
-              transition={{ duration: 0.45 }}
-            >
-              {product.sizes.map((s) => (
-                <label
-                  key={s}
-                  className={`size ${size === s ? 'size--active' : ''}`}
-                  onClick={() => setSize(s)}
-                >
-                  <input
-                    type="radio"
-                    name="size"
-                    value={s}
-                    checked={size === s}
-                    onChange={() => setSize(s)}
-                    className="sr-only"
-                  />
-                  {size === s && (
-                    <motion.span
-                      layoutId="size-pill"
-                      className="size__pill"
-                      transition={{ type: 'spring', stiffness: 520, damping: 34 }}
-                    />
-                  )}
-                  <span className="size__label">{s}</span>
-                </label>
-              ))}
-            </motion.div>
-          </fieldset>
+          <SizeSelector
+            product={product}
+            value={size}
+            onChange={(s) => {
+              setSize(s)
+              if (state === 'error') setState('idle')
+            }}
+            error={state === 'error'}
+            reduced={reduced}
+          />
 
           <div className="pdp__buy">
             <QtyStepper value={qty} onChange={setQty} label={`Cantidad de ${product.name}`} />
@@ -195,6 +166,11 @@ function ProductView({ product }) {
             </motion.button>
           </div>
 
+          {product.room === 4 && (
+            <Link to={`/sneakers/${product.id}`} className="pdp__museum pdp__market">
+              <TagIcon width={18} height={18} /> Ver precios por talla e historial en el Mercado de Sneakers
+            </Link>
+          )}
           <Link to={`/museo?obra=${product.id}`} className="pdp__museum">
             <CubeIcon width={18} height={18} /> Ver prenda colgada en el rack 3D de la {rooms[product.room].name}
           </Link>
