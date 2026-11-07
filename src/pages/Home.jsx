@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { products, rooms, getProduct, formatPrice } from '../data/products.js'
 import { sneakers, getMarket, formatPct } from '../data/market.js'
 import ProductCard from '../components/ProductCard.jsx'

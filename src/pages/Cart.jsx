@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence, motion, animate } from 'framer-motion'
+import { AnimatePresence, m as motion, animate } from 'framer-motion'
 import { useCart } from '../context/CartContext.jsx'
 import { formatPrice } from '../data/products.js'
 import QtyStepper from '../components/QtyStepper.jsx'

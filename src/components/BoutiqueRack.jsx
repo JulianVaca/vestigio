@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { formatPrice, rooms } from '../data/products.js'
@@ -8,24 +8,34 @@ import { flyToCart } from '../lib/flyToCart.js'
 import SizeSelector from './SizeSelector.jsx'
 import { ArrowIcon, ArrowLeftIcon, CheckIcon, CubeIcon, PlusIcon } from './Icons.jsx'
 
-/** Percha de bronce dorado: gancho + hombros + placa del atelier. */
-function Hanger() {
+/** Percha de bronce dorado: trazos directos (sin url(#id) cross-tree) para composición GPU instantánea en 3D. */
+const Hanger = memo(function Hanger() {
   return (
     <svg className="vrack__hanger" viewBox="0 0 180 64" fill="none" aria-hidden="true">
-      <path d="M90 31 V19 C90 14 94 10.5 98.5 10.5 C103 10.5 106 14 106 18" stroke="url(#vrack-gold)" strokeWidth="3" strokeLinecap="round" />
-      <path d="M14 58 C38 36, 68 31, 90 31 C112 31, 142 36, 166 58" stroke="url(#vrack-gold)" strokeWidth="5" strokeLinecap="round" />
-      <rect x="76" y="27" width="28" height="8" rx="2" fill="url(#vrack-gold)" />
+      <path
+        d="M90 31 V19 C90 14 94 10.5 98.5 10.5 C103 10.5 106 14 106 18"
+        stroke="#C9A75E"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M14 58 C38 36, 68 31, 90 31 C112 31, 142 36, 166 58"
+        stroke="#C9A75E"
+        strokeWidth="5"
+        strokeLinecap="round"
+      />
+      <rect x="76" y="27" width="28" height="8" rx="2" fill="#D9BF86" />
     </svg>
   )
-}
+})
 
 /**
- * Rack de boutique física.
+ * Rack de boutique física (memoizado).
  * Las prendas cuelgan DE LADO sobre una barra dorada, como en un perchero real de tienda;
  * al pasar el cursor (o enfocar con teclado) la percha gira y la prenda queda DE FRENTE.
  * Clic / toque fija la prenda y abre su ficha de compra rápida debajo.
  */
-export default function BoutiqueRack({ items, title, subtitle }) {
+const BoutiqueRack = memo(function BoutiqueRack({ items, title, subtitle }) {
   const [active, setActive] = useState(0)
   const [size, setSize] = useState(null)
   const [added, setAdded] = useState(false)
@@ -115,17 +125,6 @@ export default function BoutiqueRack({ items, title, subtitle }) {
 
   return (
     <section className="vrack" aria-label={title || 'Rack interactivo de prendas'}>
-      <svg width="0" height="0" style={{ position: 'absolute' }} aria-hidden="true">
-        <defs>
-          <linearGradient id="vrack-gold" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stopColor="#8a6a2c" />
-            <stop offset="0.45" stopColor="#e2c98f" />
-            <stop offset="0.7" stopColor="#a8853f" />
-            <stop offset="1" stopColor="#d9bf86" />
-          </linearGradient>
-        </defs>
-      </svg>
-
       <header className="vrack__header">
         <div>
           <p className="eyebrow">Boutique · Pasa el cursor o toca una percha</p>
@@ -184,7 +183,7 @@ export default function BoutiqueRack({ items, title, subtitle }) {
                         alt=""
                         width="420"
                         height="560"
-                        loading="lazy"
+                        loading={idx < 6 ? 'eager' : 'lazy'}
                         decoding="async"
                         draggable={false}
                       />
@@ -266,4 +265,6 @@ export default function BoutiqueRack({ items, title, subtitle }) {
       </AnimatePresence>
     </section>
   )
-}
+})
+
+export default BoutiqueRack

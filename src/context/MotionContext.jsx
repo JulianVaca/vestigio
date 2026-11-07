@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { MotionConfig } from 'framer-motion'
+import { LazyMotion, MotionConfig } from 'framer-motion'
+
+// Funciones de animación en un chunk aparte (ver src/lib/motionFeatures.js)
+const loadFeatures = () => import('../lib/motionFeatures.js').then((r) => r.default)
 
 /**
  * Control de movimiento y accesibilidad.
@@ -35,7 +38,9 @@ export function MotionProvider({ children }) {
 
   return (
     <MotionCtx.Provider value={value}>
-      <MotionConfig reducedMotion={reduced ? 'always' : 'never'}>{children}</MotionConfig>
+      <LazyMotion features={loadFeatures}>
+        <MotionConfig reducedMotion={reduced ? 'always' : 'never'}>{children}</MotionConfig>
+      </LazyMotion>
     </MotionCtx.Provider>
   )
 }

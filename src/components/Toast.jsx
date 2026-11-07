@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext.jsx'
 import { useMotionPref } from '../context/MotionContext.jsx'

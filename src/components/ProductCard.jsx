@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { memo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { formatPrice } from '../data/products.js'
@@ -8,10 +8,10 @@ import { flyToCart } from '../lib/flyToCart.js'
 import { PlusIcon, CheckIcon, CloseIcon } from './Icons.jsx'
 
 /**
- * Tarjeta de prenda en el catálogo y estanterías.
+ * Tarjeta de prenda en el catálogo y estanterías (memoizada para evitar re-renders al filtrar/ordenar).
  * Permite inspección limpia de la pieza completa y selección rápida de talla sin distorsionar la imagen.
  */
-export default function ProductCard({ product, priority = false }) {
+const ProductCard = memo(function ProductCard({ product, priority = false }) {
   const { add } = useCart()
   const { reduced } = useMotionPref()
   const [picking, setPicking] = useState(false)
@@ -43,6 +43,7 @@ export default function ProductCard({ product, priority = false }) {
             width="840"
             height="1120"
             loading={priority ? 'eager' : 'lazy'}
+            fetchpriority={priority ? 'high' : 'low'}
             decoding="async"
           />
           <span className="card__tag">{product.category}</span>
@@ -118,4 +119,6 @@ export default function ProductCard({ product, priority = false }) {
       </div>
     </article>
   )
-}
+})
+
+export default ProductCard

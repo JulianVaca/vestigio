@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
 import { products, categories, rooms } from '../data/products.js'
 import ProductCard from '../components/ProductCard.jsx'
@@ -123,27 +123,15 @@ export default function Catalog() {
             Mostrando {list.length} {list.length === 1 ? 'prenda original' : 'prendas originales'} en vitrina
           </p>
 
-          <motion.div layout className="grid grid--4">
-            <AnimatePresence mode="popLayout">
-              {list.map((p, i) => (
-                <motion.div
-                  key={p.id}
-                  layout
-                  initial={{ opacity: 0, scale: 0.94, y: 24 }}
-                  animate={{
-                    opacity: 1,
-                    scale: 1,
-                    y: 0,
-                    transition: { delay: Math.min(i * 0.03, 0.35), duration: 0.45, ease: [0.22, 1, 0.36, 1] },
-                  }}
-                  exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.2 } }}
-                  transition={{ layout: { type: 'spring', stiffness: 320, damping: 34 } }}
-                >
-                  <ProductCard product={p} priority={i < 4} />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </motion.div>
+          {/* Sin animaciones de layout de framer-motion: medían las 30 tarjetas en cada cambio
+              (layouts forzados). Fundido CSS escalonado al cambiar filtro u orden. */}
+          <div key={`${cat}-${sort}`} className="grid grid--4 grid--fade">
+            {list.map((p, i) => (
+              <div key={p.id} style={{ '--i': Math.min(i, 12) }}>
+                <ProductCard product={p} priority={i < 4} />
+              </div>
+            ))}
+          </div>
         </>
       )}
     </main>

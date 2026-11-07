@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import SizeGuide, { FitMeter } from './SizeGuide.jsx'
 import { stockOf, fitOf, recommendSize, loadFitProfile } from '../data/sizing.js'
 

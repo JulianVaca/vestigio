@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import { CloseIcon } from './Icons.jsx'
 import {
   SIZE_TABLES,

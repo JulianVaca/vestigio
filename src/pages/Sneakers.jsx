@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import { formatPrice } from '../data/products.js'
 import { sneakers, getMarket, formatPct } from '../data/market.js'
 import { VerifiedSeal, OliveBranch } from '../components/Ornaments.jsx'
@@ -118,16 +118,9 @@ export default function Sneakers() {
           {size && ` · precios para ${size}`}
         </p>
 
-        <motion.ul layout className="market__grid">
-          <AnimatePresence mode="popLayout">
-            {list.map(({ p, m, price }, i) => (
-              <motion.li
-                key={p.id}
-                layout
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0, transition: { delay: i * 0.04 } }}
-                exit={{ opacity: 0, scale: 0.96 }}
-              >
+        <ul key={`${silhouette}-${size}-${sort}`} className="market__grid grid--fade">
+          {list.map(({ p, m, price }, i) => (
+              <li key={p.id} style={{ '--i': i }}>
                 <Link to={`/sneakers/${p.id}`} className="mtile">
                   <span className="mtile__media">
                     <img
@@ -138,6 +131,7 @@ export default function Sneakers() {
                       width="840"
                       height="1120"
                       loading={i < 3 ? 'eager' : 'lazy'}
+                      decoding="async"
                     />
                     <span className="mtile__badge">
                       <VerifiedSeal className="mtile__seal" /> Verificado
@@ -153,10 +147,9 @@ export default function Sneakers() {
                     <span className="mtile__sold">{m.sales} vendidos</span>
                   </span>
                 </Link>
-              </motion.li>
-            ))}
-          </AnimatePresence>
-        </motion.ul>
+              </li>
+          ))}
+        </ul>
       </div>
     </main>
   )

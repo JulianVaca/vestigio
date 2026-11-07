@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { formatPrice } from '../data/products.js'
 import { sneakers, getMarket, formatPct, formatDate, loadOffers, saveOffer } from '../data/market.js'
 import { useCart } from '../context/CartContext.jsx'

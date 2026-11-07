@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -10,7 +10,7 @@ import { stations, HALL, dividers, exhibits, sculptures, DOOR_HALF } from './lay
 import { rooms, getProduct, formatPrice } from '../data/products.js'
 import { useCart } from '../context/CartContext.jsx'
 import { flyToCart } from '../lib/flyToCart.js'
-import { ArrowIcon, ArrowLeftIcon, CloseIcon, PlayIcon, PauseIcon, PlusIcon, CheckIcon, TagIcon } from '../components/Icons.jsx'
+import { ArrowIcon, ArrowLeftIcon, CloseIcon, PlayIcon, PauseIcon, PlusIcon, CheckIcon } from '../components/Icons.jsx'
 
 const AUTOPLAY_MS = 6500
 
@@ -27,20 +27,17 @@ function detectQuality() {
   const lowPower = coarse || cores <= 4
   const deviceDpr = window.devicePixelRatio || 1
   const px = window.innerWidth * window.innerHeight
-  const budget = lowPower ? 1.4e6 : 2.6e6 // píxeles renderizados por fotograma
+  const budget = lowPower ? 1.35e6 : 2.3e6 // píxeles renderizados por fotograma
   const byBudget = Math.sqrt(budget / px)
-  const maxDpr = Math.max(Math.min(1, deviceDpr), Math.min(deviceDpr, lowPower ? 1.25 : 1.5, byBudget))
-  const antialias = !lowPower && px * maxDpr * maxDpr <= 2.6e6
+  const maxDpr = Math.max(Math.min(1, deviceDpr), Math.min(deviceDpr, lowPower ? 1.2 : 1.4, byBudget))
+  const antialias = !lowPower && px * maxDpr * maxDpr <= 2.3e6
   return { lowPower, maxDpr, minDpr: Math.min(maxDpr, 0.7), antialias }
 }
 
 /**
  * DPR adaptativo SÓLO DE BAJADA.
- * Antes subía y bajaba con histéresis: en pantallas de 60 Hz los FPS rondaban el umbral
- * y el lienzo cambiaba de tamaño varias veces por segundo. Cada cambio recrea los
- * framebuffers en la GPU y producía tirones de 100 ms a 1 s (medido con la GPU AMD integrada).
- * Ahora sólo baja un escalón cuando los FPS se mantienen bajos 3 s seguidos, como máximo
- * dos veces por visita, y nunca vuelve a subir.
+ * Sólo baja un escalón cuando los FPS se mantienen bajos 3 s seguidos, como máximo
+ * dos veces por visita, y nunca vuelve a subir para evitar recrear framebuffers en GPU.
  */
 function AdaptiveDpr({ min, max }) {
   const setDpr = useThree((s) => s.setDpr)
@@ -48,7 +45,7 @@ function AdaptiveDpr({ min, max }) {
   useFrame((_, delta) => {
     const s = st.current
     if (s.steps >= 2 || s.dpr <= min) return
-    if (delta > 0.25) return // pestaña en segundo plano o pausa: no medir
+    if (delta > 0.25) return
     s.acc += delta
     s.frames++
     if (s.acc < 1) return
@@ -56,11 +53,11 @@ function AdaptiveDpr({ min, max }) {
     s.acc = 0
     s.frames = 0
     if (s.warmup > 0) {
-      s.warmup-- // los primeros segundos incluyen subida de texturas y compilación
+      s.warmup--
       return
     }
-    s.slow = fps < 40 ? s.slow + 1 : 0
-    if (s.slow >= 3) {
+    s.slow = fps < 42 ? s.slow + 1 : 0
+    if (s.slow >= 2) {
       s.dpr = Math.max(min, +(s.dpr - 0.2).toFixed(2))
       s.steps++
       s.slow = 0
@@ -71,26 +68,82 @@ function AdaptiveDpr({ min, max }) {
   return null
 }
 
+/** Minimapa memoizado: no vuelve a reconciliar los 45 nodos SVG salvo que cambie la sala o la obra activa. */
+const Minimap = memo(function Minimap({ room, selected, minimapPlayer, onMinimapClick }) {
+  return (
+    <figure className="minimap" aria-label="Plano del museo. Toca un punto para caminar hasta allí.">
+      <svg viewBox={`-0.5 -0.5 ${HALL.zStart - HALL.zEnd + 1} ${HALL.halfW * 2 + 1}`} onClick={onMinimapClick}>
+        <rect x="0" y="0" width={HALL.zStart - HALL.zEnd} height={HALL.halfW * 2} className="minimap__hall" />
+        {rooms.map((r, i) => (
+          <rect
+            key={r.id}
+            x={HALL.zStart - dividers[i]}
+            y="0"
+            width={HALL.roomLen}
+            height={HALL.halfW * 2}
+            className={`minimap__room ${room === i ? 'is-active' : ''}`}
+          />
+        ))}
+        {dividers.map((z) => (
+          <g key={z} className="minimap__wall">
+            <line x1={HALL.zStart - z} x2={HALL.zStart - z} y1="0" y2={HALL.halfW - DOOR_HALF} />
+            <line x1={HALL.zStart - z} x2={HALL.zStart - z} y1={HALL.halfW + DOOR_HALF} y2={HALL.halfW * 2} />
+          </g>
+        ))}
+        {sculptures.map((s, i) => (
+          <circle key={i} cx={HALL.zStart - s.z} cy={s.x + HALL.halfW} r="0.65" className="minimap__sculpture" />
+        ))}
+        {exhibits.map((e) => (
+          <rect
+            key={e.product.id}
+            x={HALL.zStart - e.position[2] - 0.8}
+            y={e.side === -1 ? 0 : HALL.halfW * 2 - 0.55}
+            width="1.6"
+            height="0.55"
+            className={`minimap__art ${selected === e.product.id ? 'is-active' : ''}`}
+          />
+        ))}
+        <g ref={minimapPlayer}>
+          <path d="M1.6 0 L-0.9 -1.0 L-0.4 0 L-0.9 1.0 Z" className="minimap__player" />
+        </g>
+      </svg>
+    </figure>
+  )
+})
+
 export default function MuseumExperience({ reduced, initialStation = 0, initialProduct = null, autoStart = false }) {
   const navigate = useNavigate()
   const controller = useRef(null)
   const minimapPlayer = useRef(null)
+  const hintRef = useRef(null)
   const [progress, setProgress] = useState(0)
   const [loaded, setLoaded] = useState(false)
   const [started, setStarted] = useState(false)
   const [station, setStation] = useState(null)
   const [room, setRoom] = useState(-1)
-  const [hovered, setHovered] = useState(null)
   const [selected, setSelected] = useState(null)
   const [autoplay, setAutoplay] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [quality] = useState(detectQuality)
   const { lowPower } = quality
   const [isPortrait] = useState(() => typeof window !== 'undefined' && window.innerWidth < window.innerHeight)
-  // Callbacks estables: Scene está memoizada y no debe re-renderizarse con cada hover del HUD
+
   const handleReady = useCallback(() => setLoaded(true), [])
+  // Hover imperativo sobre el DOM: pasar el cursor por los 30 racks produce CERO re-renders de React
+  const handleHover = useCallback((id) => {
+    const el = hintRef.current
+    if (!el) return
+    if (id) {
+      const p = getProduct(id)
+      el.textContent = p ? `${p.name} · clic en el rack para elegir talla` : ''
+      el.style.display = p ? '' : 'none'
+    } else {
+      el.style.display = 'none'
+    }
+  }, [])
+
   const glOptions = useMemo(
-    () => ({ antialias: quality.antialias, powerPreference: 'high-performance', stencil: false }),
+    () => ({ antialias: quality.antialias, powerPreference: 'high-performance', stencil: false, alpha: false }),
     [quality.antialias],
   )
   const cameraOptions = useMemo(
@@ -132,7 +185,6 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
     goTo(target >= 0 ? target : 0, { openPanel: Boolean(initialProduct) })
   }
 
-  // El visitante ya pulsó «Entrar» en la portada ligera: arrancar en cuanto la escena esté lista
   const startRef = useRef(start)
   startRef.current = start
   useEffect(() => {
@@ -178,7 +230,7 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
     return () => window.removeEventListener('keydown', onKey)
   }, [started, station, goTo])
 
-  const onMinimapClick = (e) => {
+  const onMinimapClick = useCallback((e) => {
     const svg = e.currentTarget
     const pt = svg.createSVGPoint()
     pt.x = e.clientX
@@ -187,7 +239,9 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
     const x = p.y - HALL.halfW
     const z = HALL.zStart - p.x
     if (controller.current?.walkTo(x, z)) setStation(null)
-  }
+  }, [])
+
+  const onArrive = useCallback(() => {}, [])
 
   const current = station !== null ? stations[station] : null
   const roomLabel = room === -1 ? 'Pórtico · Vestíbulo' : rooms[room]?.name ?? 'Museo'
@@ -200,8 +254,6 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
         gl={glOptions}
         camera={cameraOptions}
         onCreated={({ gl }) => {
-          // En producción no se consulta el estado de compilación de cada shader:
-          // esas llamadas (getError / getProgramParameter) bloquean la CPU hasta que la GPU termina.
           if (import.meta.env.PROD) gl.debug.checkShaderErrors = false
         }}
         aria-label="Museo 3D interactivo de la colección Ágora y Archivo"
@@ -214,7 +266,7 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
           <Scene
             reduced={reduced}
             lowPower={lowPower}
-            onHover={setHovered}
+            onHover={handleHover}
             onSelect={onSelect}
             onFloorClick={onFloorClick}
             onNavigate={navigate}
@@ -226,7 +278,7 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
           started={started}
           reduced={reduced}
           onRoomChange={setRoom}
-          onArrive={() => {}}
+          onArrive={onArrive}
           onUserInteract={onUserInteract}
           minimapRef={minimapPlayer}
         />
@@ -240,7 +292,6 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.7, ease: [0.76, 0, 0.24, 1] } }}
           >
-            {/* Misma tarjeta que la portada ligera (Museum.jsx): sin saltos al montar el 3D */}
             <motion.div exit={{ y: -30, opacity: 0, transition: { duration: 0.45 } }}>
               <IntroCard
                 status={loaded ? 'ready' : 'loading'}
@@ -291,44 +342,7 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
             </div>
           </div>
 
-          {/* ───────── Minimapa de 5 salas y 30 piezas ───────── */}
-          <figure className="minimap" aria-label="Plano del museo. Toca un punto para caminar hasta allí.">
-            <svg viewBox={`-0.5 -0.5 ${HALL.zStart - HALL.zEnd + 1} ${HALL.halfW * 2 + 1}`} onClick={onMinimapClick}>
-              <rect x="0" y="0" width={HALL.zStart - HALL.zEnd} height={HALL.halfW * 2} className="minimap__hall" />
-              {rooms.map((r, i) => (
-                <rect
-                  key={r.id}
-                  x={HALL.zStart - dividers[i]}
-                  y="0"
-                  width={HALL.roomLen}
-                  height={HALL.halfW * 2}
-                  className={`minimap__room ${room === i ? 'is-active' : ''}`}
-                />
-              ))}
-              {dividers.map((z) => (
-                <g key={z} className="minimap__wall">
-                  <line x1={HALL.zStart - z} x2={HALL.zStart - z} y1="0" y2={HALL.halfW - DOOR_HALF} />
-                  <line x1={HALL.zStart - z} x2={HALL.zStart - z} y1={HALL.halfW + DOOR_HALF} y2={HALL.halfW * 2} />
-                </g>
-              ))}
-              {sculptures.map((s, i) => (
-                <circle key={i} cx={HALL.zStart - s.z} cy={s.x + HALL.halfW} r="0.65" className="minimap__sculpture" />
-              ))}
-              {exhibits.map((e) => (
-                <rect
-                  key={e.product.id}
-                  x={HALL.zStart - e.position[2] - 0.8}
-                  y={e.side === -1 ? 0 : HALL.halfW * 2 - 0.55}
-                  width="1.6"
-                  height="0.55"
-                  className={`minimap__art ${selected === e.product.id ? 'is-active' : ''}`}
-                />
-              ))}
-              <g ref={minimapPlayer}>
-                <path d="M1.6 0 L-0.9 -1.0 L-0.4 0 L-0.9 1.0 Z" className="minimap__player" />
-              </g>
-            </svg>
-          </figure>
+          <Minimap room={room} selected={selected} minimapPlayer={minimapPlayer} onMinimapClick={onMinimapClick} />
 
           {/* ───────── Barra del recorrido ───────── */}
           <nav className="tour" aria-label="Recorrido guiado">
@@ -368,20 +382,40 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
             >
               {autoplay ? <PauseIcon /> : <PlayIcon />}
             </button>
-            <button className="icon-btn tour__help" onClick={() => setShowHelp((v) => !v)} aria-expanded={showHelp} aria-label="Ayuda de controles">
+            <button
+              className="icon-btn tour__help"
+              onClick={() => setShowHelp((v) => !v)}
+              aria-expanded={showHelp}
+              aria-label="Ayuda de controles"
+            >
               ?
             </button>
           </nav>
 
           <AnimatePresence>
             {showHelp && (
-              <motion.div className="museum__help" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}>
+              <motion.div
+                className="museum__help"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+              >
                 <ul className="museum__keys">
-                  <li><kbd>Arrastrar</kbd> mirar alrededor</li>
-                  <li><kbd>Clic</kbd> piso: caminar · rack: ver prenda y talla</li>
-                  <li><kbd>WASD</kbd> / flechas: caminar libremente</li>
-                  <li><kbd>N</kbd> <kbd>P</kbd> rack siguiente / anterior (30 prendas)</li>
-                  <li><kbd>Esc</kbd> cerrar panel</li>
+                  <li>
+                    <kbd>Arrastrar</kbd> mirar alrededor
+                  </li>
+                  <li>
+                    <kbd>Clic</kbd> piso: caminar · rack: ver prenda y talla
+                  </li>
+                  <li>
+                    <kbd>WASD</kbd> / flechas: caminar libremente
+                  </li>
+                  <li>
+                    <kbd>N</kbd> <kbd>P</kbd> rack siguiente / anterior (30 prendas)
+                  </li>
+                  <li>
+                    <kbd>Esc</kbd> cerrar panel
+                  </li>
                 </ul>
               </motion.div>
             )}
@@ -400,11 +434,12 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
             )}
           </AnimatePresence>
 
-          {hovered && !selected && (
-            <div className="museum__hint" aria-hidden="true">
-              {getProduct(hovered)?.name} · clic en el rack para elegir talla
-            </div>
-          )}
+          <div
+            ref={hintRef}
+            className="museum__hint"
+            style={{ display: selected ? 'none' : 'none' }}
+            aria-hidden="true"
+          />
         </>
       )}
     </div>
@@ -478,7 +513,9 @@ function ProductPanel({ id, reduced, onSelectOther, onClose }) {
       </div>
 
       <div>
-        <p className="eyebrow">{rooms[p.room].name} · {p.brand}</p>
+        <p className="eyebrow">
+          {rooms[p.room].name} · {p.brand}
+        </p>
         <h2 className="panel__title">{p.name}</h2>
         <p className="panel__price">{formatPrice(p.price)}</p>
       </div>

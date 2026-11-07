@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { getProduct, products, formatPrice, rooms } from '../data/products.js'
@@ -22,17 +22,20 @@ export default function Product() {
 function ProductView({ product }) {
   const scope = useRef(null)
   const imgRef = useRef(null)
+  const rectRef = useRef(null)
   const { add } = useCart()
   const { reduced } = useMotionPref()
   const [size, setSize] = useState(null)
   const [qty, setQty] = useState(1)
   const [state, setState] = useState('idle') // idle | error | adding | done
-  const [zoom, setZoom] = useState({ active: false, x: 50, y: 50 })
+  const [zoomActive, setZoomActive] = useState(false)
   const [openDetail, setOpenDetail] = useState(0)
   useScrollAnimations(scope)
 
-  const related = products.filter((p) => p.id !== product.id && (p.room === product.room || p.category === product.category)).slice(0, 4)
-  const fallback = products.filter((p) => p.id !== product.id).slice(0, 4)
+  const relatedList = useMemo(() => {
+    const rel = products.filter((p) => p.id !== product.id && (p.room === product.room || p.category === product.category)).slice(0, 4)
+    return rel.length ? rel : products.filter((p) => p.id !== product.id).slice(0, 4)
+  }, [product.id, product.room, product.category])
 
   const handleAdd = async () => {
     if (!size) {
@@ -48,9 +51,24 @@ function ProductView({ product }) {
     setTimeout(() => setState('idle'), 1800)
   }
 
-  const onMove = (e) => {
-    const r = e.currentTarget.getBoundingClientRect()
-    setZoom({ active: true, x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 })
+  // Actualización imperativa de transformOrigin sin provocar re-render de React en cada movimiento del mouse
+  const onPointerEnter = (e) => {
+    if (reduced) return
+    rectRef.current = e.currentTarget.getBoundingClientRect()
+    setZoomActive(true)
+  }
+
+  const onPointerMove = (e) => {
+    if (reduced || !imgRef.current) return
+    const r = rectRef.current || (rectRef.current = e.currentTarget.getBoundingClientRect())
+    const x = ((e.clientX - r.left) / r.width) * 100
+    const y = ((e.clientY - r.top) / r.height) * 100
+    imgRef.current.style.transformOrigin = `${x.toFixed(1)}% ${y.toFixed(1)}%`
+  }
+
+  const onPointerLeave = () => {
+    rectRef.current = null
+    setZoomActive(false)
   }
 
   return (
@@ -67,25 +85,27 @@ function ProductView({ product }) {
 
       <div className="pdp">
         <div
-          className={`pdp__media ${zoom.active && !reduced ? 'is-zoom' : ''}`}
-          onPointerMove={onMove}
-          onPointerLeave={() => setZoom((z) => ({ ...z, active: false }))}
+          className={`pdp__media ${zoomActive && !reduced ? 'is-zoom' : ''}`}
+          onPointerEnter={onPointerEnter}
+          onPointerMove={onPointerMove}
+          onPointerLeave={onPointerLeave}
         >
           <motion.img
             ref={imgRef}
             src={product.img}
+            srcSet={`${product.img.replace('.webp', '-sm.webp')} 420w, ${product.img} 840w`}
+            sizes="(max-width: 860px) 92vw, 46vw"
             alt={`${product.name} (${product.brand}) en color ${product.color}`}
             width="840"
             height="1120"
-            style={{
-              transformOrigin: `${zoom.x}% ${zoom.y}%`,
-            }}
+            fetchpriority="high"
+            decoding="async"
             initial={reduced ? { opacity: 0 } : { scale: 1.04, opacity: 0 }}
             animate={
               reduced
                 ? { opacity: 1 }
                 : {
-                    scale: zoom.active ? 1.65 : 1,
+                    scale: zoomActive ? 1.65 : 1,
                     opacity: 1,
                   }
             }
@@ -101,10 +121,18 @@ function ProductView({ product }) {
             variants={{ show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } } }}
           >
             {[
-              <p key="e" className="eyebrow">{product.brand} · {product.era}</p>,
-              <h1 key="h" className="h1 pdp__title">{product.name}</h1>,
-              <p key="p" className="pdp__price">{formatPrice(product.price)}</p>,
-              <p key="d" className="pdp__desc">{product.description}</p>,
+              <p key="e" className="eyebrow">
+                {product.brand} · {product.era}
+              </p>,
+              <h1 key="h" className="h1 pdp__title">
+                {product.name}
+              </h1>,
+              <p key="p" className="pdp__price">
+                {formatPrice(product.price)}
+              </p>,
+              <p key="d" className="pdp__desc">
+                {product.description}
+              </p>,
             ].map((el) => (
               <motion.div
                 key={el.key}
@@ -243,7 +271,7 @@ function ProductView({ product }) {
           </h2>
         </div>
         <div className="grid grid--4" data-reveal-stagger>
-          {(related.length ? related : fallback).map((p) => (
+          {relatedList.map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>

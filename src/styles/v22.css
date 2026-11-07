@@ -55,6 +55,18 @@
   }
 }
 
+/* Rejillas: fundido escalonado CSS (sustituye las animaciones de layout de framer-motion) */
+.grid--fade > * {
+  animation: gridIn 0.5s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 35ms);
+}
+@keyframes gridIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
 /* ---------- Rendimiento ---------- */
 /* Museo 3D: SIN backdrop-filter sobre el lienzo WebGL. El 3D cambia en cada fotograma, así que
    cada capa desenfocada (header, píldoras, minimapa, barra, panel) obligaba a la GPU a
@@ -607,8 +619,25 @@
   overflow-y: hidden;
   scrollbar-width: none;
   cursor: grab;
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+/* Desvanecido lateral con degradados (antes mask-image: obligaba a rasterizar todo el riel como máscara) */
+.vrack__stage::before,
+.vrack__stage::after {
+  content: '';
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  width: 7%;
+  pointer-events: none;
+}
+.vrack__stage::before {
+  left: 0;
+  background: linear-gradient(90deg, #e9e1d0, rgba(233, 225, 208, 0));
+}
+.vrack__stage::after {
+  right: 0;
+  background: linear-gradient(270deg, #e9e1d0, rgba(233, 225, 208, 0));
 }
 .vrack__rail::-webkit-scrollbar {
   display: none;
@@ -620,7 +649,6 @@
   position: relative;
   flex: 0 0 var(--slot);
   height: 100%;
-  perspective: 1100px;
   transition: flex-basis 0.6s var(--ease-out);
 }
 .vrack__slot:hover,
@@ -636,7 +664,9 @@
   z-index: 3;
 }
 
-/* La prenda cuelga de lado (rotateY) y gira de frente al pasar el cursor */
+/* La prenda cuelga de lado y gira de frente al pasar el cursor.
+   Transformación 2D (scaleX + skewY ≈ plano girado ~70°): el mismo efecto visual que rotateY
+   pero sin capas 3D. Con 30 prendas en 3D, el pintado por software (PageSpeed) tardaba >3 s. */
 .vrack__garment {
   position: absolute;
   top: 0;
@@ -646,8 +676,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  transform-style: preserve-3d;
-  transform: rotateY(-70deg);
+  transform-origin: 50% 0;
+  transform: scaleX(0.32) skewY(-9deg);
   transition: transform 0.75s cubic-bezier(0.25, 1.3, 0.4, 1);
   outline: none;
 }
@@ -657,7 +687,7 @@
 .vrack__slot:hover .vrack__garment,
 .vrack__slot.is-active .vrack__garment,
 .vrack__garment:focus-visible {
-  transform: rotateY(0deg) translateZ(24px);
+  transform: none;
 }
 .vrack__hanger {
   position: relative;
@@ -670,7 +700,6 @@
   position: relative;
   display: block;
   width: 100%;
-  transform-style: preserve-3d;
 }
 .vrack__face {
   position: relative;
@@ -680,13 +709,13 @@
   border-radius: 10px;
   overflow: hidden;
   background: #ece4d4;
-  box-shadow: 0 30px 50px -22px rgba(15, 26, 20, 0.55);
+  box-shadow: 0 16px 22px -16px rgba(15, 26, 20, 0.5);
   transition: box-shadow 0.4s;
 }
 .vrack__garment:focus-visible .vrack__face {
   box-shadow:
     0 0 0 3px var(--c-gold-500),
-    0 30px 50px -22px rgba(15, 26, 20, 0.55);
+    0 16px 22px -16px rgba(15, 26, 20, 0.5);
 }
 .vrack__face img {
   width: 100%;
@@ -711,12 +740,17 @@
   position: absolute;
   top: 3%;
   bottom: 1%;
-  right: 0;
-  width: 16px;
+  right: -44px;
+  width: 44px;
   border-radius: 0 6px 6px 0;
   background: linear-gradient(90deg, color-mix(in srgb, var(--hex) 70%, #000), var(--hex));
-  transform-origin: right center;
-  transform: rotateY(-90deg);
+  transition: opacity 0.4s;
+}
+/* De frente el canto no se ve */
+.vrack__slot:hover .vrack__edge,
+.vrack__slot.is-active .vrack__edge,
+.vrack__garment:focus-visible .vrack__edge {
+  opacity: 0;
 }
 .vrack__tag {
   display: flex;

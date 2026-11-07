@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import { MinusIcon, PlusIcon } from './Icons.jsx'
 
 /** Selector de cantidad: el número sale y entra en la dirección del cambio. */

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import Logo from '../components/Logo.jsx'
 import { useMotionPref } from '../context/MotionContext.jsx'
 

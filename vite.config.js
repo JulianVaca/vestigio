@@ -10,10 +10,17 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        // Three.js / R3F NO se agrupan a mano: el import() diferido del museo ya los separa.
-        // Agruparlos arrastraba módulos compartidos (React, scheduler) al chunk y obligaba
-        // a la portada a descargar y ejecutar 925 KB de Three.js en cada visita.
+        // Three.js / R3F se cargan de forma diferida al entrar al museo;
+        // separamos React/Router, Framer Motion y GSAP en chunks independientes cacheables.
         manualChunks(id) {
+          if (
+            id.includes('node_modules/react/') ||
+            id.includes('node_modules/react-dom/') ||
+            id.includes('node_modules/scheduler/') ||
+            id.includes('node_modules/react-router')
+          ) {
+            return 'vendor-react'
+          }
           if (id.includes('node_modules/framer-motion') || id.includes('node_modules/motion-')) {
             return 'vendor-motion'
           }

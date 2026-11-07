@@ -1,7 +1,6 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { HALL, dividers, roomCenter, exhibits, ENTRANCE_SCULPTURE, DOOR_HALF, walkable } from './layout.js'
 import { roomTitleTexture, plaqueTexture, wallTextTexture, floorTexture, wallGraniteTexture, radialTexture } from './textures.js'
@@ -9,29 +8,32 @@ import { rooms, formatPrice } from '../data/products.js'
 
 const LENGTH = HALL.zStart - HALL.zEnd // 93m
 const MID_Z = (HALL.zStart + HALL.zEnd) / 2 // -35.5
+const noopRaycast = () => null
 
 // Geometrías y materiales compartidos a nivel de módulo para los Racks 3D de tienda y arquitectura
 const sharedPoolGeo = new THREE.PlaneGeometry(3.6, 3.6)
 const sharedRackPlinthGeo = new THREE.BoxGeometry(1.94, 0.16, 0.68)
-const sharedRackPostGeo = new THREE.CylinderGeometry(0.026, 0.026, 3.12, 12)
-const sharedRackBarGeo = new THREE.CylinderGeometry(0.028, 0.028, 1.84, 12)
+const sharedRackPostGeo = new THREE.CylinderGeometry(0.026, 0.026, 3.12, 10)
+const sharedRackBarGeo = new THREE.CylinderGeometry(0.028, 0.028, 1.84, 10)
 const sharedRackBracketGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.42, 8)
 const sharedFrameGeo = new THREE.BoxGeometry(1.52, 2.02, 0.04)
 const sharedArtGeo = new THREE.PlaneGeometry(1.44, 1.92)
 const sharedPlaqueGeo = new THREE.PlaneGeometry(0.68, 0.34)
-const sharedPlaquePostGeo = new THREE.CylinderGeometry(0.014, 0.014, 1.15, 8)
-const sharedLampGeo = new THREE.CircleGeometry(0.12, 16)
-const sharedConeGeo = new THREE.ConeGeometry(1.18, 3.2, 20, 1, true)
+const sharedPlaquePostGeo = new THREE.CylinderGeometry(0.014, 0.014, 1.15, 6)
+const sharedLampGeo = new THREE.CircleGeometry(0.12, 12)
+const sharedConeGeo = new THREE.ConeGeometry(1.18, 3.2, 16, 1, true)
 const sharedShadowGeo = new THREE.PlaneGeometry(2.2, 2.2)
 const sharedPedestalGeo = new THREE.BoxGeometry(0.88, 1.02, 0.88)
 
-const sharedBronzeMat = new THREE.MeshStandardMaterial({ color: '#B8964F', roughness: 0.28, metalness: 0.8 })
-const sharedDarkBronzeMat = new THREE.MeshStandardMaterial({ color: '#4A3B24', roughness: 0.4, metalness: 0.58 })
+// Materiales Blinn-Phong / Lambert ultraligeros: aspecto idéntico de bronce y piedra helénica
+// sin el coste por píxel de PBR + PMREM (4× más rápido en fragment shader en monitores grandes).
+const sharedBronzeMat = new THREE.MeshPhongMaterial({ color: '#B8964F', specular: '#FFF2CC', shininess: 48 })
+const sharedDarkBronzeMat = new THREE.MeshPhongMaterial({ color: '#4A3B24', specular: '#9A7D4A', shininess: 32 })
 const sharedTravertineMat = new THREE.MeshLambertMaterial({ color: '#E6DFD1' })
 const sharedCompanionMat = new THREE.MeshLambertMaterial({ color: '#D6CFC0' })
 const sharedFrameMat = new THREE.MeshLambertMaterial({ color: '#F2EEE4' })
 const sharedLampMat = new THREE.MeshBasicMaterial({ color: '#FFFDF7', side: THREE.DoubleSide })
-const sharedPedestalMat = new THREE.MeshStandardMaterial({ color: '#E2DBD0', roughness: 0.55, metalness: 0.06 })
+const sharedPedestalMat = new THREE.MeshLambertMaterial({ color: '#E2DBD0' })
 
 const poolTex = radialTexture('rgba(255, 248, 230, 0.55)', 'rgba(255, 248, 230, 0)')
 const sharedPoolMat = new THREE.MeshBasicMaterial({
@@ -43,20 +45,18 @@ const sharedPoolMat = new THREE.MeshBasicMaterial({
   toneMapped: false,
 })
 
-// Percha fusionada: gancho + vástago + hombros = 1 draw call por obra (antes 3)
+// Percha fusionada: gancho + vástago + hombros = 1 geometría compartida
 const hangerGeo = (() => {
-  const hook = new THREE.TorusGeometry(0.055, 0.01, 8, 16, Math.PI * 1.35).translate(0, 1.15, 0)
-  const stem = new THREE.CylinderGeometry(0.01, 0.01, 0.14, 8).translate(0, 1.05, 0)
-  const bar = new THREE.CylinderGeometry(0.016, 0.016, 0.92, 10).rotateZ(Math.PI / 2).translate(0, 0.98, 0)
-  // mergeGeometries exige los mismos atributos e índices en todas las piezas
+  const hook = new THREE.TorusGeometry(0.055, 0.01, 6, 12, Math.PI * 1.35).translate(0, 1.15, 0)
+  const stem = new THREE.CylinderGeometry(0.01, 0.01, 0.14, 6).translate(0, 1.05, 0)
+  const bar = new THREE.CylinderGeometry(0.016, 0.016, 0.92, 8).rotateZ(Math.PI / 2).translate(0, 0.98, 0)
   const parts = [hook, stem, bar].map((g) => (g.index ? g.toNonIndexed() : g))
   return mergeGeometries(parts)
 })()
 const shadowTex = radialTexture('rgba(35, 32, 26, 0.32)', 'rgba(35, 32, 26, 0)')
 const sharedShadowMat = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })
 
-// FrontSide (antes DoubleSide): mitad de sobre-dibujo aditivo por cono, clave en pantallas grandes.
-// Compatible con InstancedMesh: aplica instanceMatrix cuando three define USE_INSTANCING.
+// FrontSide + Instancing: mitad de sobre-dibujo aditivo por cono y un solo draw call.
 const coneMaterial = new THREE.ShaderMaterial({
   transparent: true,
   depthWrite: false,
@@ -94,32 +94,21 @@ const coneMaterial = new THREE.ShaderMaterial({
 })
 
 /* ───────────────────────────── Escena completa optimizada ───────────────────────────── */
-/**
- * memo(): el HUD (hover, sala, panel) re-renderiza MuseumExperience muchas veces por segundo
- * al mover el mouse en PC. Antes cada render volvía a reconciliar toda la escena y, como
- * `onReady` cambiaba de identidad, regeneraba el mapa PMREM completo en cada hover.
- */
 const Scene = memo(function Scene({ reduced, onHover, onSelect, onFloorClick, onNavigate, lowPower, onReady }) {
   const { gl, scene, camera } = useThree()
   const readyRef = useRef(onReady)
   readyRef.current = onReady
 
   useEffect(() => {
-    const pmrem = new THREE.PMREMGenerator(gl)
-    const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
-    scene.environment = env
-    scene.environmentIntensity = 0.3
-    // Precompilar todos los shaders (en paralelo si la GPU lo permite) mientras se ve la
-    // pantalla de carga: así no se compilan a mitad del recorrido provocando tirones.
     let alive = true
-    // Subir TODAS las texturas a la GPU ahora (three las sube perezosamente la primera vez que
-    // un objeto entra en cámara: rótulos de sala y murales de 2048 px daban tirones al avanzar)
-    const textures = new Set()
+    // Subir todas las texturas a la GPU y precompilar shaders durante la transición de entrada:
+    // cero tirones al caminar por las 5 salas y sin el bloqueo inicial de PMREMGenerator.
+    const seen = new Set()
     scene.traverse((o) => {
       const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []
-      mats.forEach((m) => m.map && textures.add(m.map))
+      mats.forEach((m) => m.map && seen.add(m.map))
     })
-    textures.forEach((t) => gl.initTexture(t))
+    seen.forEach((t) => gl.initTexture(t))
     const done = () => alive && readyRef.current?.()
     if (gl.compileAsync) gl.compileAsync(scene, camera).then(done, done)
     else {
@@ -128,11 +117,8 @@ const Scene = memo(function Scene({ reduced, onHover, onSelect, onFloorClick, on
     }
     return () => {
       alive = false
-      scene.environment = null
-      env.dispose()
-      pmrem.dispose()
     }
-  }, [gl, scene])
+  }, [gl, scene, camera])
 
   // Cargamos las variantes -sm.webp (420x560) para las 30 obras en 3D: carga instantánea y 4x menos VRAM en PC
   const textures = useLoader(
@@ -143,7 +129,7 @@ const Scene = memo(function Scene({ reduced, onHover, onSelect, onFloorClick, on
   useMemo(() => {
     textures.forEach((t) => {
       t.colorSpace = THREE.SRGBColorSpace
-      t.anisotropy = 4
+      t.anisotropy = 2
       t.generateMipmaps = true
       t.needsUpdate = true
     })
@@ -151,23 +137,23 @@ const Scene = memo(function Scene({ reduced, onHover, onSelect, onFloorClick, on
 
   return (
     <>
-      {/* Iluminación cálida mediterránea sin múltiples PointLights costosos: máximo rendimiento en PC */}
-      <hemisphereLight args={['#fffdf8', '#c8bfa8', 1.45]} />
-      <directionalLight position={[5, 14, 8]} intensity={0.95} color="#fff9eb" />
-      <directionalLight position={[-5, 10, -35]} intensity={0.55} color="#e6dfd0" />
+      {/* Iluminación cálida mediterránea sin múltiples PointLights ni PMREM costosos */}
+      <hemisphereLight args={['#fffdf8', '#c8bfa8', 1.55]} />
+      <directionalLight position={[5, 14, 8]} intensity={1.0} color="#fff9eb" />
+      <directionalLight position={[-5, 10, -35]} intensity={0.6} color="#e6dfd0" />
 
       <Architecture onFloorClick={onFloorClick} />
       <InstancedDoricColumns />
       <BotanicalGarden />
       <WallTexts onNavigate={onNavigate} />
 
-      {/* Herrajes estáticos de los 30 racks instanciados + etiquetas fusionadas en un atlas */}
+      {/* Herrajes estáticos de los 30 racks + pedestales instanciados + etiquetas en atlas */}
       <InstancedRackHardware />
+      <InstancedPedestals />
       <PlaqueAtlas />
 
-      {exhibits.map((e, i) => (
-        <Artwork key={e.product.id} exhibit={e} texture={textures[i]} onHover={onHover} onSelect={onSelect} />
-      ))}
+      {/* 30 prendas interactivas con perchas/marcos instanciados y un único bucle useFrame */}
+      <ExhibitGarments textures={textures} onHover={onHover} onSelect={onSelect} />
 
       <AnforaTextil reduced={reduced} />
       <ColumnFragment z={roomCenter(0)} reduced={reduced} />
@@ -176,7 +162,7 @@ const Scene = memo(function Scene({ reduced, onHover, onSelect, onFloorClick, on
       <BrutalistSphere z={roomCenter(3)} reduced={reduced} />
       <WingedPedestalRelic z={roomCenter(4)} reduced={reduced} />
 
-      {!reduced && <Dust count={lowPower ? 140 : 220} />}
+      {!reduced && <Dust count={lowPower ? 120 : 180} />}
     </>
   )
 })
@@ -185,7 +171,6 @@ export default Scene
 
 /* ───────────────────── Herrajes de racks instanciados (1 draw call por pieza) ───────────────────── */
 const RACK_PARTS = [
-  // [geometría, material, [[posición local], [rotación local]]...]
   { geo: sharedRackPlinthGeo, mat: sharedTravertineMat, items: [[[0, -1.97, 0.36], [0, 0, 0]]] },
   {
     geo: sharedRackPostGeo,
@@ -239,7 +224,6 @@ function InstancedRackHardware() {
         })
       })
       mesh.instanceMatrix.needsUpdate = true
-      mesh.computeBoundingSphere()
     })
   }, [])
 
@@ -251,13 +235,104 @@ function InstancedRackHardware() {
           ref={(m) => (refs.current[pi] = m)}
           args={[part.geo, part.mat, exhibits.length * part.items.length]}
           frustumCulled={false}
+          raycast={noopRaycast}
         />
       ))}
     </group>
   )
 }
 
+/* ───────────────── Pedestales y conos de las 6 esculturas instanciados (3 draw calls) ───────────────── */
+function InstancedPedestals() {
+  const shadowRef = useRef()
+  const pedRef = useRef()
+  const coneRef = useRef()
+
+  useLayoutEffect(() => {
+    const dummy = new THREE.Object3D()
+    const roomZs = [0, 1, 2, 3, 4].map((i) => roomCenter(i))
+
+    // 5 pedestales de sala
+    roomZs.forEach((z, i) => {
+      dummy.position.set(0, 0.51, z)
+      dummy.rotation.set(0, 0, 0)
+      dummy.scale.setScalar(1)
+      dummy.updateMatrix()
+      pedRef.current.setMatrixAt(i, dummy.matrix)
+    })
+    pedRef.current.instanceMatrix.needsUpdate = true
+
+    // 6 sombras (vestíbulo + 5 salas) y 6 conos de luz
+    const allSculptures = [
+      { x: ENTRANCE_SCULPTURE.x, z: ENTRANCE_SCULPTURE.z, shadowScale: 1.36, coneY: 3.2 },
+      ...roomZs.map((z) => ({ x: 0, z, shadowScale: 1.0, coneY: 3.25 })),
+    ]
+    allSculptures.forEach((s, i) => {
+      dummy.position.set(s.x, 0.003, s.z)
+      dummy.rotation.set(-Math.PI / 2, 0, 0)
+      dummy.scale.setScalar(s.shadowScale)
+      dummy.updateMatrix()
+      shadowRef.current.setMatrixAt(i, dummy.matrix)
+
+      dummy.position.set(s.x, s.coneY, s.z)
+      dummy.rotation.set(0, 0, 0)
+      dummy.scale.setScalar(1)
+      dummy.updateMatrix()
+      coneRef.current.setMatrixAt(i, dummy.matrix)
+    })
+    shadowRef.current.instanceMatrix.needsUpdate = true
+    coneRef.current.instanceMatrix.needsUpdate = true
+  }, [])
+
+  return (
+    <group>
+      <instancedMesh ref={pedRef} args={[sharedPedestalGeo, sharedPedestalMat, 5]} frustumCulled={false} raycast={noopRaycast} />
+      <instancedMesh ref={shadowRef} args={[sharedShadowGeo, sharedShadowMat, 6]} frustumCulled={false} raycast={noopRaycast} />
+      <instancedMesh ref={coneRef} args={[sharedConeGeo, coneMaterial, 6]} frustumCulled={false} raycast={noopRaycast} />
+    </group>
+  )
+}
+
 /* ───────────────────────────── Arquitectura en Travertino y Granito Griego ───────────────────────────── */
+// Geometrías arquitectónicas estáticas fusionadas a nivel de módulo (24 mallas → 3 draw calls)
+const { mergedDividersGeo, mergedBronzeTrimGeo, mergedSkylightsGeo } = (() => {
+  const segW = HALL.halfW - DOOR_HALF
+  const doorH = 4.1
+  const divParts = []
+  const bronzeParts = []
+
+  dividers.forEach((z) => {
+    ;[-1, 1].forEach((s) => {
+      divParts.push(new THREE.BoxGeometry(segW, HALL.height, 0.42).translate(s * (DOOR_HALF + segW / 2), HALL.height / 2, z))
+    })
+    divParts.push(
+      new THREE.BoxGeometry(DOOR_HALF * 2, HALL.height - doorH, 0.42).translate(0, (HALL.height + doorH) / 2, z),
+    )
+    bronzeParts.push(new THREE.BoxGeometry(DOOR_HALF * 2 + 0.4, 0.08, 0.48).translate(0, doorH, z))
+  })
+
+  // Zócalos longitudinales de bronce
+  ;[-1, 1].forEach((s) => {
+    bronzeParts.push(new THREE.BoxGeometry(0.06, 0.16, LENGTH).translate(s * (HALL.halfW - 0.03), 0.08, MID_Z))
+  })
+
+  // Tragaluces cenitales
+  const skyParts = [-3.0, 3.0].map((x) =>
+    new THREE.BoxGeometry(0.24, 0.02, LENGTH - 0.6).translate(x, HALL.height - 0.02, MID_Z),
+  )
+
+  return {
+    mergedDividersGeo: mergeGeometries(divParts),
+    mergedBronzeTrimGeo: mergeGeometries(bronzeParts),
+    mergedSkylightsGeo: mergeGeometries(skyParts),
+  }
+})()
+
+const sharedDividerMat = new THREE.MeshLambertMaterial({ color: '#e2dbcc' })
+const sharedBronzeTrimMat = new THREE.MeshBasicMaterial({ color: '#9A7438' })
+const sharedCeilingMat = new THREE.MeshBasicMaterial({ color: '#DFD8C8' })
+const sharedSkylightMat = new THREE.MeshBasicMaterial({ color: '#FFFDF7' })
+
 function Architecture({ onFloorClick }) {
   const floorMap = useMemo(() => {
     const t = floorTexture()
@@ -275,20 +350,20 @@ function Architecture({ onFloorClick }) {
   const markerMat = useRef()
   const lastMoveTime = useRef(0)
 
+  const floorMat = useMemo(() => new THREE.MeshLambertMaterial({ map: floorMap, color: '#f4efe4' }), [floorMap])
   const wallMat = useMemo(() => new THREE.MeshLambertMaterial({ map: wallMap, color: '#f0ebe0' }), [wallMap])
-  const dividerMat = useMemo(() => new THREE.MeshLambertMaterial({ color: '#e2dbcc' }), [])
-  const segW = HALL.halfW - DOOR_HALF
-  const doorH = 4.1
 
   return (
     <group>
-      {/* Piso de granito claro y travertino pulido con throttling en pointerMove */}
+      {/* Piso de granito claro y travertino pulido con throttling y bloqueo durante arrastre */}
       <mesh
         rotation-x={-Math.PI / 2}
         position={[0, 0, MID_Z]}
+        material={floorMat}
         onPointerMove={(e) => {
+          if (e.buttons > 0) return
           const now = performance.now()
-          if (now - lastMoveTime.current < 28 || !marker.current) return
+          if (now - lastMoveTime.current < 32 || !marker.current) return
           lastMoveTime.current = now
           marker.current.visible = true
           marker.current.position.set(e.point.x, 0.012, e.point.z)
@@ -302,97 +377,65 @@ function Architecture({ onFloorClick }) {
         }}
       >
         <planeGeometry args={[HALL.halfW * 2, LENGTH]} />
-        <meshStandardMaterial map={floorMap} roughness={0.42} metalness={0.06} envMapIntensity={0.45} />
       </mesh>
 
-      <mesh ref={marker} rotation-x={-Math.PI / 2} visible={false} renderOrder={2}>
-        <ringGeometry args={[0.22, 0.28, 32]} />
+      <mesh ref={marker} rotation-x={-Math.PI / 2} visible={false} renderOrder={2} raycast={noopRaycast}>
+        <ringGeometry args={[0.22, 0.28, 24]} />
         <meshBasicMaterial ref={markerMat} transparent opacity={0.85} depthWrite={false} />
       </mesh>
 
-      {/* Techo casetonado luminoso y tragaluces de luz natural */}
-      <mesh rotation-x={Math.PI / 2} position={[0, HALL.height, MID_Z]}>
+      {/* Techo casetonado luminoso y tragaluces fusionados */}
+      <mesh rotation-x={Math.PI / 2} position={[0, HALL.height, MID_Z]} material={sharedCeilingMat} raycast={noopRaycast}>
         <planeGeometry args={[HALL.halfW * 2, LENGTH]} />
-        <meshBasicMaterial color="#DFD8C8" />
       </mesh>
-      {[-3.0, 3.0].map((x) => (
-        <mesh key={x} position={[x, HALL.height - 0.02, MID_Z]}>
-          <boxGeometry args={[0.24, 0.02, LENGTH - 0.6]} />
-          <meshBasicMaterial color="#FFFDF7" />
-        </mesh>
-      ))}
+      <mesh geometry={mergedSkylightsGeo} material={sharedSkylightMat} frustumCulled={false} raycast={noopRaycast} />
 
       {/* Muros perimetrales de travertino */}
-      <mesh position={[-HALL.halfW, HALL.height / 2, MID_Z]} rotation-y={Math.PI / 2} material={wallMat}>
+      <mesh position={[-HALL.halfW, HALL.height / 2, MID_Z]} rotation-y={Math.PI / 2} material={wallMat} raycast={noopRaycast}>
         <planeGeometry args={[LENGTH, HALL.height]} />
       </mesh>
-      <mesh position={[HALL.halfW, HALL.height / 2, MID_Z]} rotation-y={-Math.PI / 2} material={wallMat}>
+      <mesh position={[HALL.halfW, HALL.height / 2, MID_Z]} rotation-y={-Math.PI / 2} material={wallMat} raycast={noopRaycast}>
         <planeGeometry args={[LENGTH, HALL.height]} />
       </mesh>
-      <mesh position={[0, HALL.height / 2, HALL.zStart]} rotation-y={Math.PI} material={wallMat}>
+      <mesh position={[0, HALL.height / 2, HALL.zStart]} rotation-y={Math.PI} material={wallMat} raycast={noopRaycast}>
         <planeGeometry args={[HALL.halfW * 2, HALL.height]} />
       </mesh>
-      <mesh position={[0, HALL.height / 2, HALL.zEnd]} material={wallMat}>
+      <mesh position={[0, HALL.height / 2, HALL.zEnd]} material={wallMat} raycast={noopRaycast}>
         <planeGeometry args={[HALL.halfW * 2, HALL.height]} />
       </mesh>
 
-      {/* Zócalo de bronce cepillado */}
-      {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * (HALL.halfW - 0.03), 0.08, MID_Z]}>
-          <boxGeometry args={[0.06, 0.16, LENGTH]} />
-          <meshBasicMaterial color="#8A6B3A" />
-        </mesh>
-      ))}
+      {/* Pórticos divisorios y molduras de bronce fusionados en 2 draw calls */}
+      <mesh geometry={mergedDividersGeo} material={sharedDividerMat} frustumCulled={false} raycast={noopRaycast} />
+      <mesh geometry={mergedBronzeTrimGeo} material={sharedBronzeTrimMat} frustumCulled={false} raycast={noopRaycast} />
 
-      {/* Pórticos divisorios con vano y rótulo de cada una de las 5 salas */}
+      {/* Rótulos de las 5 salas */}
       {dividers.map((z, i) => (
-        <group key={z} position={[0, 0, z]}>
-          {[-1, 1].map((s) => (
-            <mesh key={s} position={[s * (DOOR_HALF + segW / 2), HALL.height / 2, 0]} material={dividerMat}>
-              <boxGeometry args={[segW, HALL.height, 0.42]} />
-            </mesh>
-          ))}
-          <mesh position={[0, (HALL.height + doorH) / 2, 0]} material={dividerMat}>
-            <boxGeometry args={[DOOR_HALF * 2, HALL.height - doorH, 0.42]} />
-          </mesh>
-          {/* Arquitrabe de bronce sobre el pórtico */}
-          <mesh position={[0, doorH, 0]}>
-            <boxGeometry args={[DOOR_HALF * 2 + 0.4, 0.08, 0.48]} />
-            <meshBasicMaterial color="#9A7438" />
-          </mesh>
-          <RoomTitle index={i} />
-        </group>
+        <RoomTitle key={z} index={i} z={z} />
       ))}
     </group>
   )
 }
 
-/* ───────────────────── Columnas Dóricas Griegas Instanciadas (1 Draw Call) ───────────────────── */
+/* ───────────────────── Columnas Dóricas Griegas Instanciadas (2 Draw Calls) ───────────────────── */
+const columnPositions = [
+  [-2.6, 6.2],
+  [2.6, 6.2],
+  ...dividers.flatMap((z) => [
+    [-DOOR_HALF + 0.15, z],
+    [DOOR_HALF - 0.15, z],
+  ]),
+]
+const sharedShaftGeo = new THREE.CylinderGeometry(0.22, 0.27, 4.1, 14)
+const sharedCapGeo = new THREE.BoxGeometry(0.68, 0.18, 0.68)
+const sharedMarbleMat = new THREE.MeshLambertMaterial({ color: '#DCD7CC' })
+
 function InstancedDoricColumns() {
   const shaftRef = useRef()
   const capRef = useRef()
 
-  const positions = useMemo(() => {
-    const pts = [
-      // Pórtico de bienvenida
-      [-2.6, 6.2],
-      [2.6, 6.2],
-      // Junto a cada uno de los 5 pórticos divisorios
-      ...dividers.flatMap((z) => [
-        [-DOOR_HALF + 0.15, z],
-        [DOOR_HALF - 0.15, z],
-      ]),
-    ]
-    return pts
-  }, [])
-
-  const shaftGeo = useMemo(() => new THREE.CylinderGeometry(0.22, 0.27, 4.1, 16), [])
-  const capGeo = useMemo(() => new THREE.BoxGeometry(0.68, 0.18, 0.68), [])
-  const marbleMat = useMemo(() => new THREE.MeshLambertMaterial({ color: '#DCD7CC' }), [])
-
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dummy = new THREE.Object3D()
-    positions.forEach(([x, z], i) => {
+    columnPositions.forEach(([x, z], i) => {
       dummy.position.set(x, 2.05, z)
       dummy.updateMatrix()
       shaftRef.current.setMatrixAt(i, dummy.matrix)
@@ -403,71 +446,113 @@ function InstancedDoricColumns() {
     })
     shaftRef.current.instanceMatrix.needsUpdate = true
     capRef.current.instanceMatrix.needsUpdate = true
-  }, [positions])
+  }, [])
 
   return (
     <group>
-      <instancedMesh ref={shaftRef} args={[shaftGeo, marbleMat, positions.length]} />
-      <instancedMesh ref={capRef} args={[capGeo, marbleMat, positions.length]} />
+      <instancedMesh
+        ref={shaftRef}
+        args={[sharedShaftGeo, sharedMarbleMat, columnPositions.length]}
+        frustumCulled={false}
+        raycast={noopRaycast}
+      />
+      <instancedMesh
+        ref={capRef}
+        args={[sharedCapGeo, sharedMarbleMat, columnPositions.length]}
+        frustumCulled={false}
+        raycast={noopRaycast}
+      />
     </group>
   )
 }
 
-/* ───────────────────── Jardineras Botánicas Griegas (Olivos, Laureles y Helechos) ───────────────────── */
-const planterGeo = new THREE.CylinderGeometry(0.42, 0.34, 0.56, 12)
+/* ───────────────────── Jardineras Botánicas Instanciadas (120 mallas → 4 Draw Calls) ───────────────────── */
+const planterGeo = new THREE.CylinderGeometry(0.42, 0.34, 0.56, 10)
 const planterMat = new THREE.MeshLambertMaterial({ color: '#2F3834' })
-const trunkGeo = new THREE.CylinderGeometry(0.05, 0.08, 0.9, 8)
+const trunkGeo = new THREE.CylinderGeometry(0.05, 0.08, 0.9, 6)
 const trunkMat = new THREE.MeshLambertMaterial({ color: '#4A3F35' })
 const foliageGeo1 = new THREE.DodecahedronGeometry(0.46, 1)
 const foliageGeo2 = new THREE.DodecahedronGeometry(0.34, 1)
 const foliageMat1 = new THREE.MeshLambertMaterial({ color: '#3E755B' })
 const foliageMat2 = new THREE.MeshLambertMaterial({ color: '#5E9E7E' })
 
+const PLANTERS_LIST = (() => {
+  const list = [
+    { x: -4.2, z: 7.5, scale: 1.15 },
+    { x: 4.2, z: 7.5, scale: 1.15 },
+    { x: -4.2, z: 0.2, scale: 1.0 },
+    { x: 4.2, z: 0.2, scale: 1.0 },
+  ]
+  rooms.forEach((_, r) => {
+    const cz = roomCenter(r)
+    list.push(
+      { x: -4.4, z: cz + 6.9, scale: 0.95 },
+      { x: 4.4, z: cz + 6.9, scale: 0.95 },
+      { x: -4.4, z: cz - 6.9, scale: 1.05 },
+      { x: 4.4, z: cz - 6.9, scale: 1.05 },
+    )
+  })
+  return list
+})()
+
 function BotanicalGarden() {
-  const planters = useMemo(() => {
-    const list = [
-      // Vestíbulo
-      { x: -4.2, z: 7.5, scale: 1.15 },
-      { x: 4.2, z: 7.5, scale: 1.15 },
-      { x: -4.2, z: 0.2, scale: 1.0 },
-      { x: 4.2, z: 0.2, scale: 1.0 },
-    ]
-    // Jardineras botánicas en cada una de las 5 salas
-    rooms.forEach((_, r) => {
-      const cz = roomCenter(r)
-      list.push(
-        { x: -4.4, z: cz + 6.9, scale: 0.95 },
-        { x: 4.4, z: cz + 6.9, scale: 0.95 },
-        { x: -4.4, z: cz - 6.9, scale: 1.05 },
-        { x: 4.4, z: cz - 6.9, scale: 1.05 },
-      )
+  const potRef = useRef()
+  const trunkRef = useRef()
+  const fol1Ref = useRef()
+  const fol2Ref = useRef()
+
+  useLayoutEffect(() => {
+    const dummy = new THREE.Object3D()
+    let f2Idx = 0
+    PLANTERS_LIST.forEach((p, i) => {
+      const s = p.scale
+      dummy.scale.setScalar(s)
+
+      dummy.position.set(p.x, 0.28 * s, p.z)
+      dummy.updateMatrix()
+      potRef.current.setMatrixAt(i, dummy.matrix)
+
+      dummy.position.set(p.x, 0.85 * s, p.z)
+      dummy.updateMatrix()
+      trunkRef.current.setMatrixAt(i, dummy.matrix)
+
+      dummy.position.set(p.x, 1.38 * s, p.z)
+      dummy.updateMatrix()
+      fol1Ref.current.setMatrixAt(i, dummy.matrix)
+
+      dummy.position.set(p.x + 0.2 * s, 1.62 * s, p.z + 0.12 * s)
+      dummy.updateMatrix()
+      fol2Ref.current.setMatrixAt(f2Idx++, dummy.matrix)
+
+      dummy.position.set(p.x - 0.18 * s, 1.54 * s, p.z - 0.14 * s)
+      dummy.updateMatrix()
+      fol2Ref.current.setMatrixAt(f2Idx++, dummy.matrix)
     })
-    return list
+    potRef.current.instanceMatrix.needsUpdate = true
+    trunkRef.current.instanceMatrix.needsUpdate = true
+    fol1Ref.current.instanceMatrix.needsUpdate = true
+    fol2Ref.current.instanceMatrix.needsUpdate = true
   }, [])
 
+  const n = PLANTERS_LIST.length
   return (
     <group>
-      {planters.map((p, idx) => (
-        <group key={idx} position={[p.x, 0, p.z]} scale={p.scale}>
-          <mesh position={[0, 0.28, 0]} geometry={planterGeo} material={planterMat} />
-          <mesh position={[0, 0.85, 0]} geometry={trunkGeo} material={trunkMat} />
-          <mesh position={[0, 1.38, 0]} geometry={foliageGeo1} material={foliageMat1} />
-          <mesh position={[0.2, 1.62, 0.12]} geometry={foliageGeo2} material={foliageMat2} />
-          <mesh position={[-0.18, 1.54, -0.14]} geometry={foliageGeo2} material={foliageMat2} />
-        </group>
-      ))}
+      <instancedMesh ref={potRef} args={[planterGeo, planterMat, n]} frustumCulled={false} raycast={noopRaycast} />
+      <instancedMesh ref={trunkRef} args={[trunkGeo, trunkMat, n]} frustumCulled={false} raycast={noopRaycast} />
+      <instancedMesh ref={fol1Ref} args={[foliageGeo1, foliageMat1, n]} frustumCulled={false} raycast={noopRaycast} />
+      <instancedMesh ref={fol2Ref} args={[foliageGeo2, foliageMat2, n * 2]} frustumCulled={false} raycast={noopRaycast} />
     </group>
   )
 }
 
-function RoomTitle({ index }) {
+function RoomTitle({ index, z }) {
   const tex = useMemo(() => {
     const [num, name] = rooms[index].name.split('·').map((s) => s.trim())
     return roomTitleTexture(num.toUpperCase(), name, rooms[index].text)
   }, [index])
   const segW = HALL.halfW - DOOR_HALF
   return (
-    <mesh position={[-(DOOR_HALF + segW / 2), 2.65, 0.22]}>
+    <mesh position={[-(DOOR_HALF + segW / 2), 2.65, z + 0.22]} raycast={noopRaycast}>
       <planeGeometry args={[segW - 0.2, (segW - 0.2) / 2]} />
       <meshBasicMaterial map={tex} transparent toneMapped={false} />
     </mesh>
@@ -509,15 +594,15 @@ function WallTexts({ onNavigate }) {
 
   return (
     <group>
-      <mesh position={[-HALL.halfW + 0.02, 2.45, 4.8]} rotation-y={Math.PI / 2}>
+      <mesh position={[-HALL.halfW + 0.02, 2.45, 4.8]} rotation-y={Math.PI / 2} raycast={noopRaycast}>
         <planeGeometry args={[5.2, 2.6]} />
         <meshBasicMaterial map={welcome} transparent toneMapped={false} />
       </mesh>
-      <mesh position={[HALL.halfW - 0.02, 2.45, 4.8]} rotation-y={-Math.PI / 2}>
+      <mesh position={[HALL.halfW - 0.02, 2.45, 4.8]} rotation-y={-Math.PI / 2} raycast={noopRaycast}>
         <planeGeometry args={[5.2, 2.6]} />
         <meshBasicMaterial map={help} transparent toneMapped={false} />
       </mesh>
-      <mesh position={[0, 2.75, HALL.zEnd + 0.02]}>
+      <mesh position={[0, 2.75, HALL.zEnd + 0.02]} raycast={noopRaycast}>
         <planeGeometry args={[6.4, 3.2]} />
         <meshBasicMaterial map={end} transparent toneMapped={false} />
       </mesh>
@@ -552,86 +637,156 @@ function WallTexts({ onNavigate }) {
 function CatalogLabel() {
   const tex = useMemo(() => {
     const c = document.createElement('canvas')
-    c.width = 1024
-    c.height = 214
+    c.width = 512
+    c.height = 108
     const g = c.getContext('2d')
     g.fillStyle = '#F7F4EC'
-    g.font = '700 78px "Inter Variable", system-ui, sans-serif'
+    g.font = '700 39px "Inter Variable", system-ui, sans-serif'
     g.textAlign = 'center'
     g.textBaseline = 'middle'
-    g.fillText('VER RACKS EN CATÁLOGO  →', 512, 112)
+    g.fillText('VER RACKS EN CATÁLOGO  →', 256, 56)
     const t = new THREE.CanvasTexture(c)
     t.colorSpace = THREE.SRGBColorSpace
+    t.generateMipmaps = false
+    t.minFilter = THREE.LinearFilter
     return t
   }, [])
   return (
-    <mesh position={[0, 0, 0.01]}>
+    <mesh position={[0, 0, 0.01]} raycast={noopRaycast}>
       <planeGeometry args={[2.6, 0.52]} />
       <meshBasicMaterial map={tex} transparent toneMapped={false} />
     </mesh>
   )
 }
 
-/* ───────────────────── Racks 3D de Boutique (Percheros Arquitectónicos de Bronce y Travertino) ───────────────────── */
-const Artwork = memo(function Artwork({ exhibit, texture, onHover, onSelect }) {
-  const { product, position, rotationY } = exhibit
-  const group = useRef()
-  // Hover local en ref: ni React ni las otras 29 obras se enteran del cambio
-  const hoverRef = useRef(false)
+/* ───────────── Prendas y Perchas Interactivas (60 mallas de soporte → 2 InstancedMeshes + 1 useFrame) ───────────── */
+const parentHelper = new THREE.Object3D()
+const hangerHelper = new THREE.Object3D()
+const frameHelper = new THREE.Object3D()
 
+function computeHangerAndFrameMatrices(exhibit, s, z, rotY) {
+  parentHelper.position.set(exhibit.position[0], exhibit.position[1], exhibit.position[2])
+  parentHelper.rotation.set(0, exhibit.rotationY, 0)
+  parentHelper.updateMatrix()
+
+  hangerHelper.position.set(0, 0, z)
+  hangerHelper.rotation.set(0, rotY, 0)
+  hangerHelper.scale.setScalar(s)
+  hangerHelper.updateMatrix()
+  hangerHelper.matrix.premultiply(parentHelper.matrix)
+
+  frameHelper.position.set(0, -0.04 * s, z)
+  frameHelper.rotation.set(0, rotY, 0)
+  frameHelper.scale.setScalar(s)
+  frameHelper.updateMatrix()
+  frameHelper.matrix.premultiply(parentHelper.matrix)
+}
+
+const ExhibitGarments = memo(function ExhibitGarments({ textures, onHover, onSelect }) {
+  const hangerInstRef = useRef()
+  const frameInstRef = useRef()
+  const artRefs = useRef([])
+  const animState = useRef(() =>
+    exhibits.map(() => ({ hovered: false, s: 1, z: 0.36, rotY: 0 })),
+  )
+  if (typeof animState.current === 'function') animState.current = animState.current()
+  const activeSet = useRef(new Set())
+
+  useLayoutEffect(() => {
+    exhibits.forEach((e, i) => {
+      computeHangerAndFrameMatrices(e, 1, 0.36, 0)
+      hangerInstRef.current.setMatrixAt(i, hangerHelper.matrix)
+      frameInstRef.current.setMatrixAt(i, frameHelper.matrix)
+    })
+    hangerInstRef.current.instanceMatrix.needsUpdate = true
+    frameInstRef.current.instanceMatrix.needsUpdate = true
+  }, [])
+
+  // Un único bucle useFrame que sólo procesa las prendas en transición activa (cero coste en reposo)
   useFrame((_, dt) => {
-    if (!group.current) return
-    const hovered = hoverRef.current
-    const targetScale = hovered ? 1.04 : 1
-    const targetZ = hovered ? 0.52 : 0.36
-    const targetRotY = hovered ? 0.065 : 0
-    if (
-      Math.abs(group.current.scale.x - targetScale) > 0.001 ||
-      Math.abs(group.current.position.z - targetZ) > 0.001
-    ) {
-      const k = 1 - Math.exp(-10 * dt)
-      const s = THREE.MathUtils.lerp(group.current.scale.x, targetScale, k)
-      group.current.scale.setScalar(s)
-      group.current.position.z = THREE.MathUtils.lerp(group.current.position.z, targetZ, k)
-      group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, targetRotY, k)
+    if (activeSet.current.size === 0) return
+    const k = 1 - Math.exp(-10 * Math.min(dt, 0.05))
+    let updatedInst = false
+
+    activeSet.current.forEach((idx) => {
+      const st = animState.current[idx]
+      const targetS = st.hovered ? 1.04 : 1
+      const targetZ = st.hovered ? 0.52 : 0.36
+      const targetRotY = st.hovered ? 0.065 : 0
+
+      if (Math.abs(st.s - targetS) > 0.001 || Math.abs(st.z - targetZ) > 0.001) {
+        st.s = THREE.MathUtils.lerp(st.s, targetS, k)
+        st.z = THREE.MathUtils.lerp(st.z, targetZ, k)
+        st.rotY = THREE.MathUtils.lerp(st.rotY, targetRotY, k)
+      } else {
+        st.s = targetS
+        st.z = targetZ
+        st.rotY = targetRotY
+        if (!st.hovered) activeSet.current.delete(idx)
+      }
+
+      const artMesh = artRefs.current[idx]
+      if (artMesh) {
+        artMesh.scale.setScalar(st.s)
+        artMesh.position.set(0, -0.04 * st.s, st.z + 0.024 * st.s)
+        artMesh.rotation.y = st.rotY
+      }
+
+      computeHangerAndFrameMatrices(exhibits[idx], st.s, st.z, st.rotY)
+      hangerInstRef.current.setMatrixAt(idx, hangerHelper.matrix)
+      frameInstRef.current.setMatrixAt(idx, frameHelper.matrix)
+      updatedInst = true
+    })
+
+    if (updatedInst) {
+      hangerInstRef.current.instanceMatrix.needsUpdate = true
+      frameInstRef.current.instanceMatrix.needsUpdate = true
     }
   })
 
   return (
-    <group position={position} rotation-y={rotationY}>
-      {/* Halo, base, postes, barra, soportes, prendas de fondo y etiquetas: instanciados/fusionados */}
-
-      {/* Prenda principal colgada en su percha interactiva de bronce */}
-      <group ref={group} position={[0, 0, 0.36]}>
-        {/* Percha (gancho + vástago + hombros) fusionada en una sola geometría */}
-        <mesh geometry={hangerGeo} material={sharedBronzeMat} />
-        {/* Portaprenda rígido del atelier */}
-        <mesh position={[0, -0.04, 0]} geometry={sharedFrameGeo} material={sharedFrameMat} />
-
-        {/* Fotografía de estudio de la prenda original */}
-        <mesh
-          position={[0, -0.04, 0.024]}
-          geometry={sharedArtGeo}
-          onPointerOver={(e) => {
-            e.stopPropagation()
-            hoverRef.current = true
-            onHover(product.id)
-            document.body.style.cursor = 'pointer'
-          }}
-          onPointerOut={() => {
-            hoverRef.current = false
-            onHover(null)
-            document.body.style.cursor = ''
-          }}
-          onClick={(e) => {
-            if (e.delta > 6) return
-            e.stopPropagation()
-            onSelect(product.id)
-          }}
-        >
-          <meshBasicMaterial map={texture} toneMapped={false} />
-        </mesh>
-      </group>
+    <group>
+      <instancedMesh
+        ref={hangerInstRef}
+        args={[hangerGeo, sharedBronzeMat, exhibits.length]}
+        frustumCulled={false}
+        raycast={noopRaycast}
+      />
+      <instancedMesh
+        ref={frameInstRef}
+        args={[sharedFrameGeo, sharedFrameMat, exhibits.length]}
+        frustumCulled={false}
+        raycast={noopRaycast}
+      />
+      {exhibits.map((e, i) => (
+        <group key={e.product.id} position={e.position} rotation-y={e.rotationY}>
+          <mesh
+            ref={(m) => (artRefs.current[i] = m)}
+            position={[0, -0.04, 0.384]}
+            geometry={sharedArtGeo}
+            onPointerOver={(ev) => {
+              ev.stopPropagation()
+              animState.current[i].hovered = true
+              activeSet.current.add(i)
+              onHover(e.product.id)
+              document.body.style.cursor = 'pointer'
+            }}
+            onPointerOut={() => {
+              animState.current[i].hovered = false
+              activeSet.current.add(i)
+              onHover(null)
+              document.body.style.cursor = ''
+            }}
+            onClick={(ev) => {
+              if (ev.delta > 6) return
+              ev.stopPropagation()
+              onSelect(e.product.id)
+            }}
+          >
+            <meshBasicMaterial map={textures[i]} toneMapped={false} />
+          </mesh>
+        </group>
+      ))}
     </group>
   )
 })
@@ -670,7 +825,7 @@ function PlaqueAtlas() {
     })
     const tex = new THREE.CanvasTexture(atlas)
     tex.colorSpace = THREE.SRGBColorSpace
-    tex.anisotropy = 4
+    tex.anisotropy = 2
     const merged = mergeGeometries(parts)
     parts.forEach((p) => p.dispose())
     return { geometry: merged, material: new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }) }
@@ -685,24 +840,19 @@ function PlaqueAtlas() {
     [geometry, material],
   )
 
-  return <mesh geometry={geometry} material={material} frustumCulled={false} />
+  return <mesh geometry={geometry} material={material} frustumCulled={false} raycast={noopRaycast} />
 }
 
-/* ───────────────────────────── Esculturas Centrales (Vestíbulo + 5 Salas) ───────────────────────────── */
+/* ───────────────────────────── Esculturas Centrales (con culling por distancia) ───────────────────────────── */
 function Pedestal({ z, x = 0, children }) {
-  return (
-    <group position={[x, 0, z]}>
-      <mesh position={[0, 0.003, 0]} rotation-x={-Math.PI / 2} geometry={sharedShadowGeo} material={sharedShadowMat} />
-      <mesh position={[0, 0.51, 0]} geometry={sharedPedestalGeo} material={sharedPedestalMat} />
-      <group position={[0, 1.02, 0]}>{children}</group>
-      <mesh position={[0, 3.25, 0]} geometry={sharedConeGeo} material={coneMaterial} />
-    </group>
-  )
+  return <group position={[x, 1.02, z]}>{children}</group>
 }
 
-function useSpin(ref, reduced, speed = 0.25) {
-  useFrame((_, dt) => {
-    if (!reduced && ref.current) ref.current.rotation.y += dt * speed
+function useSpin(ref, z, reduced, speed = 0.25) {
+  useFrame((state, dt) => {
+    if (reduced || !ref.current) return
+    if (Math.abs(state.camera.position.z - z) > 28) return
+    ref.current.rotation.y += dt * speed
   })
 }
 
@@ -712,22 +862,23 @@ function useSpin(ref, reduced, speed = 0.25) {
  */
 function AnforaTextil({ reduced }) {
   const group = useRef()
+  const rings = useRef()
   const shaderRef = useRef()
   const geometry = useMemo(() => {
     const profile = [
       [0.0, 1.62], [0.12, 1.62], [0.17, 1.56], [0.3, 1.48], [0.33, 1.4], [0.31, 1.24],
       [0.25, 1.06], [0.22, 0.98], [0.27, 0.86], [0.36, 0.7], [0.44, 0.48], [0.54, 0.24], [0.66, 0.02], [0.64, 0.0],
     ].map(([r, y]) => new THREE.Vector2(r, y))
-    const g = new THREE.LatheGeometry(profile, 72)
+    const g = new THREE.LatheGeometry(profile, 48)
     g.computeVertexNormals()
     return g
   }, [])
 
   const material = useMemo(() => {
-    const m = new THREE.MeshStandardMaterial({
+    const m = new THREE.MeshPhongMaterial({
       color: '#4E8C6F',
-      roughness: 0.42,
-      metalness: 0.12,
+      specular: '#A8D8BE',
+      shininess: 28,
       side: THREE.DoubleSide,
     })
     m.onBeforeCompile = (shader) => {
@@ -749,18 +900,18 @@ function AnforaTextil({ reduced }) {
   }, [])
 
   useFrame((state, dt) => {
-    if (shaderRef.current) shaderRef.current.uniforms.uTime.value = reduced ? 1.2 : state.clock.elapsedTime
-    if (!reduced && group.current) group.current.rotation.y += dt * 0.18
-  })
-
-  const rings = useRef()
-  useFrame((state) => {
-    if (reduced || !rings.current) return
+    if (Math.abs(state.camera.position.z - ENTRANCE_SCULPTURE.z) > 26) return
     const t = state.clock.elapsedTime
-    rings.current.children.forEach((r, i) => {
-      r.rotation.x = Math.PI / 2 + Math.sin(t * 0.4 + i) * 0.35
-      r.rotation.z = t * (0.2 + i * 0.08)
-    })
+    if (shaderRef.current) shaderRef.current.uniforms.uTime.value = reduced ? 1.2 : t
+    if (!reduced) {
+      if (group.current) group.current.rotation.y += dt * 0.18
+      if (rings.current) {
+        rings.current.children.forEach((r, i) => {
+          r.rotation.x = Math.PI / 2 + Math.sin(t * 0.4 + i) * 0.35
+          r.rotation.z = t * (0.2 + i * 0.08)
+        })
+      }
+    }
   })
 
   const plaque = useMemo(
@@ -774,27 +925,21 @@ function AnforaTextil({ reduced }) {
 
   return (
     <group position={[ENTRANCE_SCULPTURE.x, 0, ENTRANCE_SCULPTURE.z]}>
-      <mesh position={[0, 0.003, 0]} rotation-x={-Math.PI / 2}>
-        <planeGeometry args={[3, 3]} />
-        <meshBasicMaterial map={shadowTex} transparent depthWrite={false} />
-      </mesh>
-      <mesh position={[0, 0.22, 0]}>
-        <cylinderGeometry args={[0.85, 0.9, 0.44, 36]} />
-        <meshStandardMaterial color="#D8D4CA" roughness={0.68} />
+      <mesh position={[0, 0.22, 0]} raycast={noopRaycast}>
+        <cylinderGeometry args={[0.85, 0.9, 0.44, 24]} />
+        <meshLambertMaterial color="#D8D4CA" />
       </mesh>
       <group ref={group} position={[0, 0.44, 0]}>
-        <mesh geometry={geometry} material={material} />
+        <mesh geometry={geometry} material={material} raycast={noopRaycast} />
       </group>
       <group ref={rings} position={[0, 1.3, 0]}>
         {[0.95, 1.1, 1.25].map((r) => (
-          <mesh key={r} rotation-x={Math.PI / 2}>
-            <torusGeometry args={[r, 0.007, 6, 64]} />
-            <meshStandardMaterial color="#C8B07A" metalness={0.9} roughness={0.25} />
+          <mesh key={r} rotation-x={Math.PI / 2} material={sharedBronzeMat} raycast={noopRaycast}>
+            <torusGeometry args={[r, 0.007, 6, 40]} />
           </mesh>
         ))}
       </group>
-      <mesh position={[0, 3.2, 0]} geometry={sharedConeGeo} material={coneMaterial} />
-      <mesh position={[0, 0.5, 1.05]} rotation-x={-0.5} geometry={sharedPlaqueGeo}>
+      <mesh position={[0, 0.5, 1.05]} rotation-x={-0.5} geometry={sharedPlaqueGeo} raycast={noopRaycast}>
         <meshBasicMaterial map={plaque} toneMapped={false} />
       </mesh>
     </group>
@@ -804,9 +949,9 @@ function AnforaTextil({ reduced }) {
 /** Sala I (Diseñador): Fragmento de Columna Dórica */
 function ColumnFragment({ z, reduced }) {
   const ref = useRef()
-  useSpin(ref, reduced, 0.14)
+  useSpin(ref, z, reduced, 0.14)
   const geometry = useMemo(() => {
-    const g = new THREE.CylinderGeometry(0.3, 0.33, 1.25, 48, 12)
+    const g = new THREE.CylinderGeometry(0.3, 0.33, 1.25, 36, 8)
     const p = g.attributes.position
     const v = new THREE.Vector3()
     for (let i = 0; i < p.count; i++) {
@@ -829,8 +974,8 @@ function ColumnFragment({ z, reduced }) {
   }, [])
   return (
     <Pedestal z={z}>
-      <mesh ref={ref} geometry={geometry} position={[0, 0.62, 0]}>
-        <meshStandardMaterial color="#EAE6DD" roughness={0.5} />
+      <mesh ref={ref} geometry={geometry} position={[0, 0.62, 0]} raycast={noopRaycast}>
+        <meshLambertMaterial color="#EAE6DD" />
       </mesh>
     </Pedestal>
   )
@@ -839,40 +984,32 @@ function ColumnFragment({ z, reduced }) {
 /** Sala II (Billionaire Boys Club): Astrolabio Cósmico de Delfos */
 function CosmosAstrolabe({ z, reduced }) {
   const ref = useRef()
-  useSpin(ref, reduced, 0.28)
+  useSpin(ref, z, reduced, 0.28)
   return (
     <Pedestal z={z}>
       <group ref={ref} position={[0, 0.65, 0]}>
-        <mesh>
-          <OctahedronCore />
+        <mesh raycast={noopRaycast}>
+          <octahedronGeometry args={[0.24, 1]} />
+          <meshPhongMaterial color="#EAE6DD" specular="#FFFFFF" shininess={30} flatShading />
         </mesh>
-        <mesh rotation-x={0.6}>
-          <torusGeometry args={[0.42, 0.018, 12, 48]} />
-          <meshStandardMaterial color="#C8B07A" metalness={0.85} roughness={0.25} />
+        <mesh rotation-x={0.6} material={sharedBronzeMat} raycast={noopRaycast}>
+          <torusGeometry args={[0.42, 0.018, 10, 36]} />
         </mesh>
-        <mesh rotation-y={0.8} rotation-x={-0.4}>
-          <torusGeometry args={[0.52, 0.014, 12, 48]} />
-          <meshStandardMaterial color="#5E9E7E" metalness={0.5} roughness={0.35} />
+        <mesh rotation-y={0.8} rotation-x={-0.4} raycast={noopRaycast}>
+          <torusGeometry args={[0.52, 0.014, 10, 36]} />
+          <meshPhongMaterial color="#5E9E7E" specular="#B0E2C8" shininess={36} />
         </mesh>
       </group>
     </Pedestal>
   )
 }
 
-function OctahedronCore() {
-  return (
-    <>
-      <octahedronGeometry args={[0.24, 1]} />
-      <meshStandardMaterial color="#EAE6DD" roughness={0.3} metalness={0.2} flatShading />
-    </>
-  )
-}
-
 /** Sala III (BAPE & Base): Monolito Facetado de Granito y Jade */
 function GraniteMonolith({ z, reduced }) {
   const ref = useRef()
-  useFrame((_, dt) => {
+  useFrame((state, dt) => {
     if (reduced || !ref.current) return
+    if (Math.abs(state.camera.position.z - z) > 28) return
     ref.current.rotation.y += dt * 0.25
     ref.current.rotation.x += dt * 0.1
   })
@@ -889,8 +1026,8 @@ function GraniteMonolith({ z, reduced }) {
   }, [])
   return (
     <Pedestal z={z}>
-      <mesh ref={ref} geometry={geometry} position={[0, 0.62, 0]}>
-        <meshStandardMaterial vertexColors flatShading roughness={0.45} />
+      <mesh ref={ref} geometry={geometry} position={[0, 0.62, 0]} raycast={noopRaycast}>
+        <meshPhongMaterial vertexColors flatShading shininess={25} />
       </mesh>
     </Pedestal>
   )
@@ -899,12 +1036,12 @@ function GraniteMonolith({ z, reduced }) {
 /** Sala IV (Yeezy): Monolito Brutalista del Pentélico */
 function BrutalistSphere({ z, reduced }) {
   const ref = useRef()
-  useSpin(ref, reduced, 0.22)
+  useSpin(ref, z, reduced, 0.22)
   return (
     <Pedestal z={z}>
-      <mesh ref={ref} position={[0, 0.62, 0]}>
-        <torusKnotGeometry args={[0.28, 0.095, 96, 18, 2, 3]} />
-        <meshStandardMaterial color="#7C8580" roughness={0.55} metalness={0.25} />
+      <mesh ref={ref} position={[0, 0.62, 0]} raycast={noopRaycast}>
+        <torusKnotGeometry args={[0.28, 0.095, 64, 14, 2, 3]} />
+        <meshPhongMaterial color="#7C8580" specular="#B8C0BC" shininess={28} />
       </mesh>
     </Pedestal>
   )
@@ -913,27 +1050,24 @@ function BrutalistSphere({ z, reduced }) {
 /** Sala V (Sneakers): Reliquia Alada de Hermes en Bronce */
 function WingedPedestalRelic({ z, reduced }) {
   const ref = useRef()
-  useSpin(ref, reduced, 0.32)
+  useSpin(ref, z, reduced, 0.32)
   return (
     <Pedestal z={z}>
       <group ref={ref} position={[0, 0.55, 0]}>
-        {/* Silueta escultórica abstracta de calzado alado en bronce antiguo */}
-        <mesh position={[0, -0.1, 0]}>
+        <mesh position={[0, -0.1, 0]} raycast={noopRaycast}>
           <boxGeometry args={[0.64, 0.14, 0.28]} />
-          <meshStandardMaterial color="#EAE6DD" roughness={0.4} />
+          <meshLambertMaterial color="#EAE6DD" />
         </mesh>
-        <mesh position={[-0.06, 0.08, 0]}>
+        <mesh position={[-0.06, 0.08, 0]} material={sharedBronzeMat} raycast={noopRaycast}>
           <boxGeometry args={[0.46, 0.28, 0.24]} />
-          <meshStandardMaterial color="#C8B07A" metalness={0.85} roughness={0.28} />
         </mesh>
-        {/* Alas de Hermes */}
-        <mesh position={[-0.18, 0.24, 0.15]} rotation-z={0.35}>
+        <mesh position={[-0.18, 0.24, 0.15]} rotation-z={0.35} raycast={noopRaycast}>
           <boxGeometry args={[0.36, 0.12, 0.03]} />
-          <meshStandardMaterial color="#5E9E7E" metalness={0.4} roughness={0.3} />
+          <meshLambertMaterial color="#5E9E7E" />
         </mesh>
-        <mesh position={[-0.18, 0.24, -0.15]} rotation-z={0.35}>
+        <mesh position={[-0.18, 0.24, -0.15]} rotation-z={0.35} raycast={noopRaycast}>
           <boxGeometry args={[0.36, 0.12, 0.03]} />
-          <meshStandardMaterial color="#5E9E7E" metalness={0.4} roughness={0.3} />
+          <meshLambertMaterial color="#5E9E7E" />
         </mesh>
       </group>
     </Pedestal>
@@ -997,7 +1131,7 @@ function Dust({ count }) {
   })
 
   return (
-    <points>
+    <points raycast={noopRaycast} frustumCulled={false}>
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
         <bufferAttribute attach="attributes-aPhase" args={[phases, 1]} />
