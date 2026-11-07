@@ -100,7 +100,7 @@ const coneMaterial = new THREE.ShaderMaterial({
  * `onReady` cambiaba de identidad, regeneraba el mapa PMREM completo en cada hover.
  */
 const Scene = memo(function Scene({ reduced, onHover, onSelect, onFloorClick, onNavigate, lowPower, onReady }) {
-  const { gl, scene } = useThree()
+  const { gl, scene, camera } = useThree()
   const readyRef = useRef(onReady)
   readyRef.current = onReady
 
@@ -109,8 +109,25 @@ const Scene = memo(function Scene({ reduced, onHover, onSelect, onFloorClick, on
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     scene.environment = env
     scene.environmentIntensity = 0.3
-    readyRef.current?.()
+    // Precompilar todos los shaders (en paralelo si la GPU lo permite) mientras se ve la
+    // pantalla de carga: así no se compilan a mitad del recorrido provocando tirones.
+    let alive = true
+    // Subir TODAS las texturas a la GPU ahora (three las sube perezosamente la primera vez que
+    // un objeto entra en cámara: rótulos de sala y murales de 2048 px daban tirones al avanzar)
+    const textures = new Set()
+    scene.traverse((o) => {
+      const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : []
+      mats.forEach((m) => m.map && textures.add(m.map))
+    })
+    textures.forEach((t) => gl.initTexture(t))
+    const done = () => alive && readyRef.current?.()
+    if (gl.compileAsync) gl.compileAsync(scene, camera).then(done, done)
+    else {
+      gl.compile(scene, camera)
+      done()
+    }
     return () => {
+      alive = false
       scene.environment = null
       env.dispose()
       pmrem.dispose()

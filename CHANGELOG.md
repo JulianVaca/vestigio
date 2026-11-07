@@ -1,5 +1,22 @@
 # Registro de Cambios (Changelog) — VESTIGIO
 
+## [2.3.1] — Tirones del museo 3D en PC (2026-11-07)
+
+Medido con Edge sobre la GPU real (AMD Radeon integrada, Direct3D 11), 1600×900, con vsync.
+Fotogramas de más de 25 ms (saltos visibles) por escenario:
+
+| Escenario | v2.1 | v2.3.0 | v2.3.1 |
+|---|---|---|---|
+| Mover el mouse sobre las prendas | 26–30 (peor 125 ms) | 2 | **0** (peor 21 ms) |
+| Caminar con WASD | 29–47 (peor 146 ms) | 0 | **0** (peor 21 ms) |
+| Recorrido con N | — (el panel fallaba) | 14–15 | 11 (peor 90 ms) |
+
+- **DPR adaptativo sólo de bajada.** El de v2.2 subía y bajaba la resolución: con pantallas de 60 Hz oscilaba y el lienzo cambiaba de tamaño varias veces por segundo (4 veces en 4 s medidos), recreando los framebuffers de la GPU en cada cambio. Ahora sólo baja un escalón tras 3 s seguidos por debajo de 40 FPS, como máximo dos veces, y nunca vuelve a subir.
+- **Sin `backdrop-filter` sobre el lienzo 3D** (header, píldoras de sala, minimapa, barra de recorrido y panel). Cada capa desenfocada obligaba a la GPU a re-desenfocar su área en cada fotograma. Los fondos ya eran 90–96 % opacos, así que el cambio no se nota.
+- **Precompilación de shaders (`compileAsync`) y subida anticipada de texturas (`initTexture`)** durante la pantalla de carga, en lugar de hacerlo la primera vez que cada objeto entra en cámara.
+- `checkShaderErrors` desactivado en producción (evita consultas síncronas a la GPU).
+- Imágenes del panel de la prenda con decodificación asíncrona.
+
 ## [2.3.0] — Rendimiento Lighthouse y portada «Columnata» (2026-11-07)
 
 Medido con Lighthouse 12 sobre la build de producción (portada):

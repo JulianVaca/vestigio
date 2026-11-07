@@ -34,32 +34,37 @@ function detectQuality() {
 }
 
 /**
- * DPR adaptativo: mide los FPS cada segundo y baja/sube la resolución interna
- * con histéresis para que GPUs integradas de portátil mantengan la fluidez.
+ * DPR adaptativo SÓLO DE BAJADA.
+ * Antes subía y bajaba con histéresis: en pantallas de 60 Hz los FPS rondaban el umbral
+ * y el lienzo cambiaba de tamaño varias veces por segundo. Cada cambio recrea los
+ * framebuffers en la GPU y producía tirones de 100 ms a 1 s (medido con la GPU AMD integrada).
+ * Ahora sólo baja un escalón cuando los FPS se mantienen bajos 3 s seguidos, como máximo
+ * dos veces por visita, y nunca vuelve a subir.
  */
 function AdaptiveDpr({ min, max }) {
   const setDpr = useThree((s) => s.setDpr)
-  const st = useRef({ acc: 0, frames: 0, dpr: max, cooldown: 1 })
+  const st = useRef({ acc: 0, frames: 0, dpr: max, slow: 0, warmup: 3, steps: 0 })
   useFrame((_, delta) => {
-    if (delta > 0.25) return // pestaña en segundo plano o pausa: no medir
     const s = st.current
+    if (s.steps >= 2 || s.dpr <= min) return
+    if (delta > 0.25) return // pestaña en segundo plano o pausa: no medir
     s.acc += delta
     s.frames++
     if (s.acc < 1) return
     const fps = s.frames / s.acc
     s.acc = 0
     s.frames = 0
-    if (s.cooldown > 0) {
-      s.cooldown--
+    if (s.warmup > 0) {
+      s.warmup-- // los primeros segundos incluyen subida de texturas y compilación
       return
     }
-    let next = s.dpr
-    if (fps < 48) next = Math.max(min, s.dpr - 0.15)
-    else if (fps > 58 && s.dpr < max) next = Math.min(max, s.dpr + 0.1)
-    if (Math.abs(next - s.dpr) > 0.01) {
-      s.dpr = next
-      setDpr(next)
-      s.cooldown = 2
+    s.slow = fps < 40 ? s.slow + 1 : 0
+    if (s.slow >= 3) {
+      s.dpr = Math.max(min, +(s.dpr - 0.2).toFixed(2))
+      s.steps++
+      s.slow = 0
+      s.warmup = 2
+      setDpr(s.dpr)
     }
   })
   return null
@@ -186,6 +191,11 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
         dpr={quality.maxDpr}
         gl={glOptions}
         camera={cameraOptions}
+        onCreated={({ gl }) => {
+          // En producción no se consulta el estado de compilación de cada shader:
+          // esas llamadas (getError / getProgramParameter) bloquean la CPU hasta que la GPU termina.
+          if (import.meta.env.PROD) gl.debug.checkShaderErrors = false
+        }}
         aria-label="Museo 3D interactivo de la colección Ágora y Archivo"
         role="img"
       >
@@ -469,7 +479,7 @@ function ProductPanel({ id, reduced, onSelectOther, onClose }) {
               onClick={() => onSelectOther(item.id)}
               title={item.name}
             >
-              <img src={item.img.replace('.webp', '-sm.webp')} alt={item.name} width="56" height="74" />
+              <img src={item.img.replace('.webp', '-sm.webp')} alt={item.name} width="56" height="74" decoding="async" />
             </button>
           ))}
         </div>
@@ -482,6 +492,7 @@ function ProductPanel({ id, reduced, onSelectOther, onClose }) {
           alt={p.name}
           width="420"
           height="560"
+          decoding="async"
         />
       </div>
 

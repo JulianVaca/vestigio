@@ -35,6 +35,32 @@
 }
 
 /* ---------- Rendimiento ---------- */
+/* Museo 3D: SIN backdrop-filter sobre el lienzo WebGL. El 3D cambia en cada fotograma, así que
+   cada capa desenfocada (header, píldoras, minimapa, barra, panel) obligaba a la GPU a
+   re-desenfocar esa área 60 veces por segundo; en pantallas grandes de PC con GPU integrada
+   era el mayor coste del HUD. Los fondos ya eran 90–96 % opacos: el cambio no se nota. */
+.header--overlay {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: rgba(245, 241, 232, 0.97);
+}
+.museum .museum__room-pill,
+.museum .minimap,
+.museum .tour,
+.museum .panel,
+.museum .museum__help,
+.museum .museum__hint {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.museum .museum__room-pill,
+.museum .minimap,
+.museum .tour {
+  background-color: rgba(245, 241, 232, 0.96);
+}
+.museum .panel {
+  background-color: rgb(245, 241, 232);
+}
 /* Apariciones con IntersectionObserver (ver useScrollAnimations): sólo opacidad y transform */
 .reveal {
   opacity: 0;
