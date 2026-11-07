@@ -6,23 +6,51 @@ import { ArrowIcon } from '../components/Icons.jsx'
 const base = import.meta.env.BASE_URL
 
 const values = [
-  { n: '01', t: 'Piezas, no temporadas', d: 'Lanzamos colecciones cortas, como exposiciones, que permanecen disponibles hasta agotarse.' },
-  { n: '02', t: 'Hecho cerca', d: 'Talleres en Bogotá y Medellín. Conocemos a cada persona que corta y cose nuestras prendas.' },
-  { n: '03', t: 'Fichas de conservación', d: 'Cada prenda trae su ficha: origen, materiales y cómo cuidarla para que dure décadas.' },
+  {
+    n: '01',
+    t: 'El archivo como templo',
+    d: 'Tratamos cada pieza histórica de streetwear —desde el Harajuku de los 2000 hasta la sastrería deconstruida— con el rigor de un museo arqueológico.',
+  },
+  {
+    n: '02',
+    t: 'Autenticidad verificada',
+    d: 'Inspeccionamos costuras, gramajes, marquillas tejidas y procedencia de cada prenda de Diseñador, BBC, BAPE, Yeezy y cada par de colección.',
+  },
+  {
+    n: '03',
+    t: 'Permanencia mineral',
+    d: 'Nuestra arquitectura en granito griego y botánica mediterránea celebra objetos diseñados para resistir el paso de las décadas.',
+  },
 ]
 
 const timeline = [
-  { y: 'Semana 1', t: 'Propuesta y marca', d: 'Concepto, público, moodboard y referentes de motion.' },
-  { y: 'Semana 2', t: 'Diseño de interfaz', d: 'Wireframes, diseño en Figma y guía de marca.' },
-  { y: 'Semana 3', t: 'Motion design', d: 'Guía de movimiento, prototipo animado y museo 3D original.' },
-  { y: 'Semana 4', t: 'Desarrollo y pruebas', d: 'Integración, Lighthouse, pruebas en móvil y publicación.' },
+  {
+    y: 'Fase I · Búsqueda',
+    t: 'Curaduría internacional',
+    d: 'Localizamos piezas de archivo en coleccionistas privados de Tokio, Nueva York, Amberes, Milán y Bogotá.',
+  },
+  {
+    y: 'Fase II · Peritaje',
+    t: 'Verificación de marquilla',
+    d: 'Autenticación microscópica de etiquetas tejidas, lavados minerales, herrajes y cajas originales.',
+  },
+  {
+    y: 'Fase III · Conservación',
+    t: 'Restauración y archivo',
+    d: 'Acondicionamiento textil en atmósfera controlada y registro fotográfico en nuestro estudio de granito.',
+  },
+  {
+    y: 'Fase IV · Exhibición',
+    t: 'Pórtico 3D y despacho',
+    d: 'Presentación en nuestras cinco salas virtuales e internacionales con envío asegurado puerta a puerta.',
+  },
 ]
 
 const team = [
-  { r: 'Líder de proyecto y UX', d: 'Planeación, investigación y wireframes' },
-  { r: 'Diseño visual', d: 'Identidad, interfaz y piezas gráficas' },
-  { r: 'Motion design', d: 'Guía de movimiento y museo 3D' },
-  { r: 'Desarrollo', d: 'Implementación, animación y publicación' },
+  { name: 'Dirección Curatorial', r: 'Archivo Diseñador & Avant-Garde', d: 'Especialistas en Raf Simons, Rick Owens, Maison Margiela y sastrería contemporánea.' },
+  { name: 'Archivo Harajuku & NYC', r: 'Billionaire Boys Club & BAPE', d: 'Curaduría de primeras ediciones de Pharrell Williams, NIGO y Sk8thing.' },
+  { name: 'División Monolito & Calzado', r: 'Yeezy & Sneakers Históricos', d: 'Peritaje de siluetas Yeezy Season y pares fundacionales desde 1985.' },
+  { name: 'Arquitectura Digital', r: 'Museo 3D & Experiencia', d: 'Diseño espacial helénico, conservación y atención privada a coleccionistas.' },
 ]
 
 export default function About() {
@@ -32,13 +60,13 @@ export default function About() {
   return (
     <main id="main" ref={scope} className="page">
       <header className="page__head container" data-reveal>
-        <p className="eyebrow">Nosotros</p>
+        <p className="eyebrow">Casa Curatorial VESTIGIO</p>
         <h1 className="h1 h1--xl">
-          Vestimos lo que <em>queda</em>.
+          Vestimos la <em>historia</em>.
         </h1>
         <p className="page__lead">
-          VESTIGIO es una marca ficticia de moda contemporánea para personas de 20 a 35 años que visitan museos, coleccionan
-          libros de arte y prefieren tener pocas prendas, pero memorables.
+          VESTIGIO es una galería y tienda de archivo dedicada a preservar las piezas más influyentes del streetwear y la moda de
+          diseñador contemporánea, exhibidas en un diálogo permanente con la arquitectura clásica griega.
         </p>
       </header>
 
@@ -47,18 +75,18 @@ export default function About() {
           <img
             data-parallax="0.25"
             src={`${base}img/atelier.webp`}
-            alt="Mesa de trabajo del atelier con muestras de tela terracota, arena y oliva, bocetos, tijeras y un busto de yeso"
+            alt="Mesa de curaduría con muestras textiles, marquillas de archivo y fragmentos escultóricos"
             width="1200"
             height="800"
             loading="lazy"
           />
         </div>
-        <figcaption className="container">El atelier, donde cada colección empieza como un fragmento.</figcaption>
+        <figcaption className="container">Nuestro laboratorio de archivo y conservación textil.</figcaption>
       </figure>
 
       <section className="section container" aria-labelledby="values-title">
         <h2 id="values-title" className="h2" data-reveal>
-          Tres <em>principios</em>
+          Tres <em>pilares</em>
         </h2>
         <div className="values" data-reveal-stagger>
           {values.map((v) => (
@@ -73,7 +101,7 @@ export default function About() {
 
       <section className="section container" aria-labelledby="process-title">
         <h2 id="process-title" className="h2" data-reveal>
-          Cómo construimos <em>este sitio</em>
+          Proceso de <em>curaduría</em>
         </h2>
         <ol className="timeline" data-reveal-stagger>
           {timeline.map((t) => (
@@ -88,13 +116,15 @@ export default function About() {
 
       <section className="section container" aria-labelledby="team-title">
         <h2 id="team-title" className="h2" data-reveal>
-          El <em>equipo</em>
+          Departamentos del <em>archivo</em>
         </h2>
         <ul className="team" data-reveal-stagger>
           {team.map((m, i) => (
             <li key={m.r} className="team__card">
-              <span className="team__avatar" aria-hidden="true">{String.fromCharCode(65 + i)}</span>
-              <h3>Integrante {i + 1}</h3>
+              <span className="team__avatar" aria-hidden="true">
+                {['I', 'II', 'III', 'IV'][i]}
+              </span>
+              <h3>{m.name}</h3>
               <p className="team__role">{m.r}</p>
               <p>{m.d}</p>
             </li>
@@ -102,7 +132,7 @@ export default function About() {
         </ul>
         <div className="about-links" data-reveal>
           <Link to="/marca" className="link-arrow">
-            Ver la guía de marca <ArrowIcon width={18} height={18} />
+            Explorar identidad y paleta griega <ArrowIcon width={18} height={18} />
           </Link>
         </div>
       </section>

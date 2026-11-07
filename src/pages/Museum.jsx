@@ -20,7 +20,6 @@ export default function Museum() {
   const [fontsReady, setFontsReady] = useState(false)
   const [webgl] = useState(hasWebGL)
 
-  // Los rótulos 3D se pintan en canvas: esperamos a que las fuentes estén listas
   useEffect(() => {
     let alive = true
     Promise.all([
@@ -43,7 +42,7 @@ export default function Museum() {
       <main id="main" className="page container notfound">
         <p className="eyebrow">Museo 3D</p>
         <h1 className="h1">Tu navegador no puede abrir las salas 3D</h1>
-        <p className="page__lead">Necesitamos WebGL para mostrar el museo. Puedes ver toda la colección en el catálogo.</p>
+        <p className="page__lead">Necesitamos WebGL para mostrar el museo. Puedes explorar las 30 piezas en el catálogo.</p>
         <Link to="/catalogo" className="btn btn--primary">Ir al catálogo</Link>
       </main>
     )
@@ -51,12 +50,12 @@ export default function Museum() {
 
   const sala = params.get('sala')
   const obra = params.get('obra')
-  // primera parada de la sala pedida (cada sala tiene 2 obras; la parada 0 es el vestíbulo)
-  const initialStation = sala !== null ? 1 + Number(sala) * 2 : 0
+  // Primera parada de la sala pedida (cada una de las 5 salas tiene 6 obras; la parada 0 es el pórtico)
+  const initialStation = sala !== null ? 1 + Number(sala) * 6 : 0
 
   return (
     <main id="main" className="museum-page">
-      <h1 className="sr-only">Museo 3D de la colección Ruinas Suaves</h1>
+      <h1 className="sr-only">Museo 3D de la exposición Ágora y Archivo</h1>
       <Suspense fallback={<MuseumFallback />}>
         {fontsReady ? (
           <MuseumExperience reduced={reduced} initialStation={initialStation} initialProduct={obra} />
@@ -73,8 +72,8 @@ function MuseumFallback() {
     <div className="museum museum--loading" aria-busy="true">
       <div className="museum__intro">
         <div className="museum__intro-card">
-          <p className="eyebrow">Museo VESTIGIO</p>
-          <p className="h2">Abriendo las puertas…</p>
+          <p className="eyebrow">Museo VESTIGIO · Pórtico Helénico</p>
+          <p className="h2">Preparando las cinco salas…</p>
           <div className="museum__loader">
             <div className="museum__loader-track">
               <div className="museum__loader-fill museum__loader-fill--indeterminate" />

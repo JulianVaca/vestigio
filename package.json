@@ -1,14 +1,14 @@
 {
   "name": "vestigio",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
-  "description": "VESTIGIO — tienda de ropa ficticia presentada como un museo 3D interactivo. Proyecto de motion design web.",
+  "description": "VESTIGIO — Archivo de streetwear e historia presentado en un museo 3D interactivo de granito griego y botánica.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "images": "node scripts/optimize-images.mjs"
+    "images": "node scripts/generate-catalog-images.mjs"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",

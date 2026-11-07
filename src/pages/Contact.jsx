@@ -4,7 +4,7 @@ import { useScrollAnimations } from '../hooks/useScrollAnimations.js'
 import { useMotionPref } from '../context/MotionContext.jsx'
 import { CheckIcon } from '../components/Icons.jsx'
 
-const topics = ['Tallas', 'Envíos', 'Visita al atelier', 'Prensa', 'Otro']
+const topics = ['Asesoría de Tallas', 'Envíos Asegurados', 'Cita en Showroom', 'Consignación de Archivo', 'Prensa']
 
 function validate(data) {
   const errors = {}
@@ -40,11 +40,14 @@ export default function Contact() {
   return (
     <main id="main" ref={scope} className="page container">
       <header className="page__head" data-reveal>
-        <p className="eyebrow">Contacto</p>
+        <p className="eyebrow">Concierge & Showroom</p>
         <h1 className="h1">
-          Hablemos <em>de piezas</em>
+          Hablemos <em>de archivo</em>
         </h1>
-        <p className="page__lead">Respondemos en menos de 24 horas hábiles. También puedes agendar una visita privada al atelier.</p>
+        <p className="page__lead">
+          Nuestro equipo de curadores responde en menos de 24 horas hábiles. Agenda una cita privada para conocer las piezas en
+          persona o solicitar medidas exactas de marquilla.
+        </p>
       </header>
 
       <div className="contact">
@@ -60,10 +63,10 @@ export default function Contact() {
                 animate={shake && !reduced ? { x: [0, -10, 10, -6, 6, 0] } : {}}
                 transition={{ duration: 0.45 }}
               >
-                <Field name="name" label="Nombre" value={data.name} onChange={update} error={errors.name} />
+                <Field name="name" label="Nombre completo" value={data.name} onChange={update} error={errors.name} />
                 <Field name="email" type="email" label="Correo electrónico" value={data.email} onChange={update} error={errors.email} />
                 <fieldset className="topics">
-                  <legend>Tema</legend>
+                  <legend>Motivo de consulta</legend>
                   <div className="chips">
                     {topics.map((t) => (
                       <label key={t} className={`chip ${data.topic === t ? 'chip--active' : ''}`}>
@@ -74,19 +77,29 @@ export default function Contact() {
                     ))}
                   </div>
                 </fieldset>
-                <Field name="message" label="Mensaje" textarea value={data.message} onChange={update} error={errors.message} />
+                <Field name="message" label="Mensaje o pieza de interés" textarea value={data.message} onChange={update} error={errors.message} />
                 <button className="btn btn--primary" type="submit">
-                  Enviar mensaje
+                  Enviar solicitud a curaduría
                 </button>
-                <p className="form__note">Formulario de demostración: los datos no se envían a ningún servidor.</p>
+                <p className="form__note">Atención personalizada y confidencial para coleccionistas y clientes.</p>
               </motion.form>
             ) : (
               <motion.div key="ok" className="success" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} role="status">
-                <span className="success__icon"><CheckIcon width={32} height={32} /></span>
+                <span className="success__icon">
+                  <CheckIcon width={32} height={32} />
+                </span>
                 <h2 className="h2">Gracias, {data.name.split(' ')[0]}</h2>
-                <p>Recibimos tu mensaje sobre “{data.topic}”. Te escribiremos a {data.email}.</p>
-                <button className="btn btn--ghost" onClick={() => { setSent(false); setData({ name: '', email: '', topic: topics[0], message: '' }) }}>
-                  Enviar otro mensaje
+                <p>
+                  Tu consulta sobre «{data.topic}» ha sido asignada a un curador. Te responderemos a {data.email}.
+                </p>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => {
+                    setSent(false)
+                    setData({ name: '', email: '', topic: topics[0], message: '' })
+                  }}
+                >
+                  Enviar otra consulta
                 </button>
               </motion.div>
             )}
@@ -95,16 +108,24 @@ export default function Contact() {
 
         <aside className="contact__info" data-reveal-stagger>
           <div>
-            <h2 className="footer__title">Atelier</h2>
-            <p>Calle 70 # 10-25, Bogotá (dirección ficticia)<br />Martes a sábado · 10:00 – 19:00</p>
+            <h2 className="footer__title">Showroom & Galería</h2>
+            <p>
+              Calle 70A # 9-42, Chapinero Alto, Bogotá
+              <br />
+              Martes a sábado · 11:00 – 19:30
+            </p>
           </div>
           <div>
-            <h2 className="footer__title">Escríbenos</h2>
-            <p>hola@vestigio.co<br />+57 300 000 0000</p>
+            <h2 className="footer__title">Concierge Directo</h2>
+            <p>
+              curaduria@vestigio.co
+              <br />
+              +57 (601) 742 8900
+            </p>
           </div>
           <div>
-            <h2 className="footer__title">Redes</h2>
-            <p>@vestigio.atelier</p>
+            <h2 className="footer__title">Comunidad & Archivo</h2>
+            <p>@vestigio.archive</p>
           </div>
         </aside>
       </div>
@@ -116,11 +137,24 @@ function Field({ name, label, error, textarea, ...rest }) {
   const Tag = textarea ? 'textarea' : 'input'
   return (
     <label className={`field ${error ? 'field--error' : ''}`}>
-      <Tag name={name} placeholder=" " aria-invalid={!!error} aria-describedby={error ? `${name}-err` : undefined} rows={textarea ? 5 : undefined} {...rest} />
+      <Tag
+        name={name}
+        placeholder=" "
+        aria-invalid={!!error}
+        aria-describedby={error ? `${name}-err` : undefined}
+        rows={textarea ? 5 : undefined}
+        {...rest}
+      />
       <span>{label}</span>
       <AnimatePresence>
         {error && (
-          <motion.em id={`${name}-err`} className="field__error" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+          <motion.em
+            id={`${name}-err`}
+            className="field__error"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+          >
             {error}
           </motion.em>
         )}

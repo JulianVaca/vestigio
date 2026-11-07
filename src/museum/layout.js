@@ -1,40 +1,54 @@
 import { products, rooms } from '../data/products.js'
 
 /**
- * Plano del museo (unidades = metros).
+ * Plano arquitectónico del Museo VESTIGIO (unidades = metros).
+ * Cinco salas temáticas de estilo griego en granito con vegetación botánica y 30 piezas (6 por sala).
  *
- *   z = +10  ┌───────────── muro de entrada ─────────────┐
- *            │        VESTÍBULO  (escultura original)    │
- *   z =  -2  ├──────┐                         ┌──────────┤  ← muro divisor con vano
- *            │ SALA I · Estructura                       │
- *   z = -14  ├──────┐                         ┌──────────┤
- *            │ SALA II · Pigmento                        │
- *   z = -26  ├──────┐                         ┌──────────┤
- *            │ SALA III · Línea                          │
- *   z = -38  ├──────┐                         ┌──────────┤
- *            │ SALA IV · Pátina                          │
- *   z = -50  └──────────── muro final (logo) ────────────┘
- *           x = -5                                   x = +5
+ *   z = +11  ┌───────────── Pórtico de entrada ─────────────┐
+ *            │        VESTÍBULO  (Ánfora Textil Helénica)   │
+ *   z =  -2  ├──────┐                               ┌───────┤
+ *            │ SALA I · Ágora & Diseñador (6 piezas)        │
+ *   z = -18  ├──────┐                               ┌───────┤
+ *            │ SALA II · Cosmos & BBC (6 piezas)            │
+ *   z = -34  ├──────┐                               ┌───────┤
+ *            │ SALA III · Camuflaje & BAPE (6 piezas)       │
+ *   z = -50  ├──────┐                               ┌───────┤
+ *            │ SALA IV · Monolito & Yeezy (6 piezas)        │
+ *   z = -66  ├──────┐                               ┌───────┤
+ *            │ SALA V · Pedestal & Sneakers (6 piezas)      │
+ *   z = -82  └──────────── Muro final (Archivo) ────────────┘
+ *           x = -5.6                                       x = +5.6
  */
-export const HALL = { halfW: 5, height: 5, zStart: 10, zEnd: -50, roomLen: 12, firstDivider: -2 }
-export const EYE = 1.65
-export const DOOR_HALF = 2.4
-export const dividers = rooms.map((_, i) => HALL.firstDivider - i * HALL.roomLen) // [-2,-14,-26,-38]
-export const roomCenter = (i) => HALL.firstDivider - HALL.roomLen / 2 - i * HALL.roomLen // -8,-20,-32,-44
+export const HALL = {
+  halfW: 5.6,
+  height: 5.4,
+  zStart: 11,
+  zEnd: -82,
+  roomLen: 16,
+  firstDivider: -2,
+}
+export const EYE = 1.68
+export const DOOR_HALF = 2.5
+export const dividers = rooms.map((_, i) => HALL.firstDivider - i * HALL.roomLen) // [-2, -18, -34, -50, -66]
+export const roomCenter = (i) => HALL.firstDivider - HALL.roomLen / 2 - i * HALL.roomLen // [-10, -26, -42, -58, -74]
 
-export const ENTRANCE_SCULPTURE = { x: 0, z: 2.5 }
+export const ENTRANCE_SCULPTURE = { x: 0, z: 3.2 }
 export const sculptures = [ENTRANCE_SCULPTURE, ...rooms.map((_, i) => ({ x: 0, z: roomCenter(i) }))]
 
-/** Cada prenda se cuelga en un muro lateral; la primera de la sala a la izquierda, la segunda a la derecha. */
+/**
+ * 30 piezas: 6 por cada una de las 5 salas (3 en el muro izquierdo y 3 en el muro derecho).
+ */
 export const exhibits = products.map((p) => {
   const inRoom = products.filter((q) => q.room === p.room)
-  const k = inRoom.indexOf(p)
-  const side = k === 0 ? -1 : 1
-  const z = roomCenter(p.room) + (k === 0 ? 2.6 : -2.6)
+  const k = inRoom.indexOf(p) // 0..5
+  const side = k % 2 === 0 ? -1 : 1
+  const row = Math.floor(k / 2) // 0, 1, 2
+  const z = roomCenter(p.room) + (1 - row) * 4.6
   return {
     product: p,
     side,
-    position: [side * (HALL.halfW - 0.06), 1.95, z],
+    row,
+    position: [side * (HALL.halfW - 0.06), 2.0, z],
     rotationY: side === -1 ? Math.PI / 2 : -Math.PI / 2,
   }
 })
@@ -45,31 +59,45 @@ const lookAt = (px, pz, tx, ty, tz) => {
   return { yaw: Math.atan2(-dx, -dz), pitch: Math.atan2(ty - EYE, Math.hypot(dx, dz)) }
 }
 
-/** Paradas del recorrido guiado (vestíbulo → 8 piezas → muro final). */
+/** Paradas del recorrido guiado (vestíbulo → 30 piezas → muro final). */
 export const stations = [
   {
     id: 'entrada',
-    label: 'Vestíbulo · Ánfora textil',
+    label: 'Pórtico · Ánfora Textil Helénica',
     room: -1,
     x: 0,
-    z: 7.4,
-    ...lookAt(0, 7.4, 0, 1.5, ENTRANCE_SCULPTURE.z),
+    z: 8.0,
+    ...lookAt(0, 8.0, 0, 1.55, ENTRANCE_SCULPTURE.z),
   },
   ...exhibits.map((e) => {
-    const x = e.side * 2.05
+    const x = e.side * 2.35
     const z = e.position[2]
-    return { id: e.product.id, label: e.product.name, room: e.product.room, productId: e.product.id, x, z, ...lookAt(x, z, e.position[0], 1.85, z) }
+    return {
+      id: e.product.id,
+      label: e.product.name,
+      room: e.product.room,
+      productId: e.product.id,
+      x,
+      z,
+      ...lookAt(x, z, e.position[0], 1.9, z),
+    }
   }),
-  // frente al muro final de la Sala IV, con el botón 3D "VER CATÁLOGO" despejado
-  { id: 'final', label: 'Fin del recorrido', room: 3, x: 0, z: -46.0, ...lookAt(0, -46.0, 0, 2.1, HALL.zEnd) },
+  {
+    id: 'final',
+    label: 'Fin del recorrido · Archivo completo',
+    room: 4,
+    x: 0,
+    z: -78.0,
+    ...lookAt(0, -78.0, 0, 2.2, HALL.zEnd),
+  },
 ]
 
-export const START = { x: 0, z: 9.4, yaw: 0, pitch: 0.06 }
+export const START = { x: 0, z: 9.8, yaw: 0, pitch: 0.05 }
 
 /** ¿En qué sala está el visitante? -1 = vestíbulo */
 export function roomAt(z) {
   if (z > HALL.firstDivider) return -1
-  return Math.min(rooms.length - 1, Math.floor((HALL.firstDivider - z) / HALL.roomLen))
+  return Math.min(rooms.length - 1, Math.max(0, Math.floor((HALL.firstDivider - z) / HALL.roomLen)))
 }
 
 /* ───────────────────────── Colisiones y rutas ───────────────────────── */
@@ -78,14 +106,18 @@ const MARGIN = 0.55
 export function walkable(x, z) {
   if (Math.abs(x) > HALL.halfW - MARGIN) return false
   if (z > HALL.zStart - MARGIN || z < HALL.zEnd + MARGIN) return false
-  for (const d of dividers) if (Math.abs(z - d) < 0.2 + MARGIN && Math.abs(x) > DOOR_HALF - MARGIN) return false
-  for (const s of sculptures) if (Math.hypot(x - s.x, z - s.z) < 0.95) return false
+  for (const d of dividers) {
+    if (Math.abs(z - d) < 0.22 + MARGIN && Math.abs(x) > DOOR_HALF - MARGIN) return false
+  }
+  for (const s of sculptures) {
+    if (Math.hypot(x - s.x, z - s.z) < 0.92) return false
+  }
   return true
 }
 
 function segmentClear(a, b) {
   const len = Math.hypot(b.x - a.x, b.z - a.z)
-  const steps = Math.max(2, Math.ceil(len / 0.2))
+  const steps = Math.max(2, Math.ceil(len / 0.35))
   for (let i = 0; i <= steps; i++) {
     const t = i / steps
     if (!walkable(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t)) return false
@@ -93,21 +125,15 @@ function segmentClear(a, b) {
   return true
 }
 
-// Nodos de navegación: vanos de las puertas y pasillos a los lados de cada escultura
 const navNodes = [
   ...dividers.map((z) => ({ x: 0, z })),
   ...sculptures.flatMap((s) => [
-    { x: -1.8, z: s.z },
-    { x: 1.8, z: s.z },
+    { x: -1.9, z: s.z },
+    { x: 1.9, z: s.z },
   ]),
-  { x: 0, z: 6.5 },
+  { x: 0, z: 7.0 },
 ]
 
-/**
- * Ruta más corta entre dos puntos esquivando muros y esculturas
- * (grafo de visibilidad + Dijkstra; ~20 nodos, costo despreciable).
- * Devuelve la polilínea o null si el destino no es caminable.
- */
 export function findPath(a, b) {
   if (!walkable(b.x, b.z)) return null
   if (segmentClear(a, b)) return [a, b]
@@ -145,7 +171,6 @@ export function pathLength(path) {
   return L
 }
 
-/** Punto a una distancia `d` sobre la polilínea, más la dirección del tramo. */
 export function pointOnPath(path, d) {
   for (let i = 1; i < path.length; i++) {
     const a = path[i - 1]
@@ -153,7 +178,11 @@ export function pointOnPath(path, d) {
     const seg = Math.hypot(b.x - a.x, b.z - a.z)
     if (d <= seg || i === path.length - 1) {
       const t = seg === 0 ? 1 : Math.min(1, d / seg)
-      return { x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t, dirYaw: Math.atan2(-(b.x - a.x), -(b.z - a.z)) }
+      return {
+        x: a.x + (b.x - a.x) * t,
+        z: a.z + (b.z - a.z) * t,
+        dirYaw: Math.atan2(-(b.x - a.x), -(b.z - a.z)),
+      }
     }
     d -= seg
   }

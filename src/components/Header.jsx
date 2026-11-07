@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Link, useLocation } from 'react-router-dom'
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import Logo from './Logo.jsx'
-import { BagIcon, MenuIcon, CloseIcon, MotionIcon, StillIcon } from './Icons.jsx'
+import { CartIcon, MenuIcon, CloseIcon, MotionIcon, StillIcon } from './Icons.jsx'
 import { useCart } from '../context/CartContext.jsx'
 import { useMotionPref } from '../context/MotionContext.jsx'
+import { runCartAcrossScreen } from '../lib/flyToCart.js'
 
 const links = [
   { to: '/', label: 'Inicio' },
@@ -16,7 +17,8 @@ const links = [
 
 /**
  * Header: se oculta al bajar (deja espacio al contenido) y reaparece al subir.
- * El contador del carrito "rebota" cada vez que cambia (retroalimentación de acción).
+ * Al hacer clic en el carrito, lanza la animación del carrito corriendo por la pantalla.
+ * El botón al lado del carrito alterna entre movimiento activo (onda) y movimiento pausado (línea horizontal).
  */
 export default function Header({ overlay }) {
   const { count } = useCart()
@@ -26,6 +28,7 @@ export default function Header({ overlay }) {
   const [scrolled, setScrolled] = useState(false)
   const lastY = useRef(0)
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => setOpen(false), [location.pathname])
 
@@ -44,6 +47,14 @@ export default function Header({ overlay }) {
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : ''
   }, [open])
+
+  const handleCartClick = (e) => {
+    e.preventDefault()
+    runCartAcrossScreen(reduced)
+    if (location.pathname !== '/carrito') {
+      navigate('/carrito')
+    }
+  }
 
   return (
     <header
@@ -69,16 +80,23 @@ export default function Header({ overlay }) {
 
         <div className="header__actions">
           <button
-            className="icon-btn"
+            className="icon-btn motion-toggle-btn"
             onClick={toggle}
             aria-pressed={reduced}
-            aria-label={reduced ? 'Activar animaciones' : 'Reducir movimiento'}
-            title={reduced ? 'Activar animaciones' : 'Reducir movimiento'}
+            aria-label={reduced ? 'Línea horizontal (movimiento reducido activo): clic para activar animaciones' : 'Onda de movimiento: clic para pausar o reducir animaciones'}
+            title={reduced ? 'Animaciones en pausa (línea horizontal) · Clic para activar movimiento' : 'Animaciones activas · Clic para modo estático (línea horizontal)'}
           >
             {reduced ? <StillIcon /> : <MotionIcon />}
           </button>
-          <Link to="/carrito" className="icon-btn cart-btn" id="cart-icon" aria-label={`Carrito, ${count} productos`}>
-            <BagIcon />
+          <a
+            href="#/carrito"
+            onClick={handleCartClick}
+            className="icon-btn cart-btn"
+            id="cart-icon"
+            aria-label={`Carrito de compras, ${count} productos`}
+            title="Ver carrito"
+          >
+            <CartIcon />
             <AnimatePresence>
               {count > 0 && (
                 <motion.span
@@ -93,7 +111,7 @@ export default function Header({ overlay }) {
                 </motion.span>
               )}
             </AnimatePresence>
-          </Link>
+          </a>
           <button className="icon-btn menu-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-controls="mobile-menu" aria-label={open ? 'Cerrar menú' : 'Abrir menú'}>
             {open ? <CloseIcon /> : <MenuIcon />}
           </button>

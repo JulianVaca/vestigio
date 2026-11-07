@@ -9,7 +9,7 @@ import { stations, HALL, dividers, exhibits, sculptures, DOOR_HALF } from './lay
 import { rooms, getProduct, formatPrice } from '../data/products.js'
 import { useCart } from '../context/CartContext.jsx'
 import { flyToCart } from '../lib/flyToCart.js'
-import { ArrowIcon, ArrowLeftIcon, CloseIcon, PlayIcon, PauseIcon, PlusIcon, CheckIcon } from '../components/Icons.jsx'
+import { ArrowIcon, ArrowLeftIcon, CloseIcon, PlayIcon, PauseIcon, PlusIcon, CheckIcon, TagIcon } from '../components/Icons.jsx'
 
 const AUTOPLAY_MS = 6500
 
@@ -26,10 +26,11 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
   const [selected, setSelected] = useState(null)
   const [autoplay, setAutoplay] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const lowPower = typeof window !== 'undefined' && (window.matchMedia('(pointer: coarse)').matches || navigator.hardwareConcurrency <= 4)
+  const lowPower =
+    typeof window !== 'undefined' &&
+    (window.matchMedia('(pointer: coarse)').matches || (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4))
   const isPortrait = typeof window !== 'undefined' && window.innerWidth < window.innerHeight
 
-  // Progreso real de carga de texturas (la escena avisa "lista" al montarse)
   useEffect(() => {
     const m = THREE.DefaultLoadingManager
     m.onProgress = (_, done, total) => setProgress(done / total)
@@ -46,13 +47,24 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
     setSelected(openPanel && pid ? pid : null)
   }, [])
 
+  const jumpToRoom = useCallback(
+    (roomIdx) => {
+      setAutoplay(false)
+      if (roomIdx === -1) {
+        goTo(0, { openPanel: false })
+      } else {
+        goTo(1 + roomIdx * 6, { openPanel: false })
+      }
+    },
+    [goTo],
+  )
+
   const start = () => {
     setStarted(true)
     const target = initialProduct ? stations.findIndex((s) => s.productId === initialProduct) : initialStation
     goTo(target >= 0 ? target : 0, { openPanel: Boolean(initialProduct) })
   }
 
-  // Recorrido automático
   const stationRef = useRef(station)
   stationRef.current = station
   useEffect(() => {
@@ -80,7 +92,6 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
     [goTo],
   )
 
-  // Teclas de atajo del recorrido
   useEffect(() => {
     const onKey = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
@@ -105,20 +116,20 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
   }
 
   const current = station !== null ? stations[station] : null
-  const roomLabel = room === -1 ? 'Vestíbulo' : rooms[room].name
+  const roomLabel = room === -1 ? 'Pórtico · Vestíbulo' : rooms[room]?.name ?? 'Museo'
 
   return (
     <div className={`museum ${started ? 'is-started' : ''}`}>
       <Canvas
         className="museum__canvas"
-        dpr={[1, lowPower ? 1.5 : 1.75]}
-        gl={{ antialias: !lowPower, powerPreference: 'high-performance' }}
-        camera={{ fov: isPortrait ? 78 : 62, near: 0.05, far: 80, position: [0, 1.65, 9.4] }}
-        aria-label="Museo 3D interactivo de la colección"
+        dpr={[1, lowPower ? 1.25 : 1.5]}
+        gl={{ antialias: !lowPower, powerPreference: 'high-performance', stencil: false }}
+        camera={{ fov: isPortrait ? 76 : 60, near: 0.1, far: 95, position: [0, 1.68, 9.8] }}
+        aria-label="Museo 3D interactivo de la colección Ágora y Archivo"
         role="img"
       >
-        <color attach="background" args={['#0e0d0c']} />
-        <fog attach="fog" args={['#0e0d0c', 14, 44]} />
+        <color attach="background" args={['#121514']} />
+        <fog attach="fog" args={['#121514', 18, 56]} />
         <Suspense fallback={null}>
           <Scene
             reduced={reduced}
@@ -148,39 +159,40 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
           <motion.div
             className="museum__intro"
             initial={{ opacity: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.8, ease: [0.76, 0, 0.24, 1] } }}
+            exit={{ opacity: 0, transition: { duration: 0.7, ease: [0.76, 0, 0.24, 1] } }}
           >
             <motion.div
               className="museum__intro-card"
               initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1, transition: { delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] } }}
-              exit={{ y: -30, opacity: 0, transition: { duration: 0.5 } }}
+              animate={{ y: 0, opacity: 1, transition: { delay: 0.15, duration: 0.75, ease: [0.22, 1, 0.36, 1] } }}
+              exit={{ y: -30, opacity: 0, transition: { duration: 0.45 } }}
             >
-              <p className="eyebrow">Museo VESTIGIO · Colección 01</p>
+              <p className="eyebrow">Museo VESTIGIO · Pórtico Griego & Botánica</p>
               <h1 className="h1">
-                Ruinas <em>Suaves</em>
+                Ágora & <em>Archivo</em>
               </h1>
               <p className="museum__intro-text">
-                Un recorrido por cuatro salas y ocho prendas. Abre cualquier pieza para ver su ficha y añadirla al carrito.
+                Recorre cinco salas en granito helénico con vegetación mediterránea y 30 piezas históricas: archivo de Diseñador,
+                Billionaire Boys Club, BAPE & Base, Yeezy y Sneakers de culto.
               </p>
               <ul className="museum__keys" aria-label="Controles">
                 <li><kbd>Arrastrar</kbd> mirar alrededor</li>
-                <li><kbd>Clic / toque</kbd> en el piso para caminar</li>
-                <li><kbd>W A S D</kbd> o flechas para moverte</li>
+                <li><kbd>Clic / toque</kbd> en el granito para caminar</li>
+                <li><kbd>W A S D</kbd> o flechas para moverte con fluidez</li>
                 <li><kbd>N</kbd> / <kbd>P</kbd> siguiente / anterior obra</li>
               </ul>
               <div className="museum__loader" aria-live="polite">
                 <div className="museum__loader-track">
-                  <motion.div className="museum__loader-fill" animate={{ scaleX: loaded ? 1 : Math.max(0.05, progress) }} />
+                  <motion.div className="museum__loader-fill" animate={{ scaleX: loaded ? 1 : Math.max(0.08, progress) }} />
                 </div>
-                <span>{loaded ? 'Salas listas' : `Preparando salas… ${Math.round(progress * 100)}%`}</span>
+                <span>{loaded ? '30 obras y 5 salas listas' : `Cargando pórtico y obras… ${Math.round(progress * 100)}%`}</span>
               </div>
               <div className="museum__intro-actions">
                 <button className="btn btn--primary" onClick={start} disabled={!loaded}>
-                  Comenzar recorrido <ArrowIcon width={18} height={18} />
+                  Entrar al pórtico 3D <ArrowIcon width={18} height={18} />
                 </button>
                 <Link to="/catalogo" className="btn btn--ghost">
-                  Prefiero el catálogo
+                  Explorar catálogo (30)
                 </Link>
               </div>
             </motion.div>
@@ -190,22 +202,44 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
 
       {started && (
         <>
-          {/* ───────── Sala actual ───────── */}
-          <div className="museum__room" aria-live="polite">
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={room}
-                initial={{ y: 14, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -14, opacity: 0 }}
-                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          {/* ───────── Sala actual + Selector rápido de salas ───────── */}
+          <div className="museum__hud-top">
+            <div className="museum__room" aria-live="polite">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={room}
+                  initial={{ y: 14, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: -14, opacity: 0 }}
+                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {roomLabel}
+                </motion.p>
+              </AnimatePresence>
+            </div>
+
+            <div className="museum__room-pills" role="navigation" aria-label="Salto rápido por salas">
+              <button
+                type="button"
+                className={`museum__room-pill ${room === -1 ? 'is-active' : ''}`}
+                onClick={() => jumpToRoom(-1)}
               >
-                {roomLabel}
-              </motion.p>
-            </AnimatePresence>
+                Pórtico
+              </button>
+              {rooms.map((r, i) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  className={`museum__room-pill ${room === i ? 'is-active' : ''}`}
+                  onClick={() => jumpToRoom(i)}
+                >
+                  {r.name.split('·')[0].trim()} · {r.name.split('·')[1]?.trim()}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* ───────── Minimapa ───────── */}
+          {/* ───────── Minimapa de 5 salas y 30 piezas ───────── */}
           <figure className="minimap" aria-label="Plano del museo. Toca un punto para caminar hasta allí.">
             <svg viewBox={`-0.5 -0.5 ${HALL.zStart - HALL.zEnd + 1} ${HALL.halfW * 2 + 1}`} onClick={onMinimapClick}>
               <rect x="0" y="0" width={HALL.zStart - HALL.zEnd} height={HALL.halfW * 2} className="minimap__hall" />
@@ -226,20 +260,20 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
                 </g>
               ))}
               {sculptures.map((s, i) => (
-                <circle key={i} cx={HALL.zStart - s.z} cy={s.x + HALL.halfW} r="0.6" className="minimap__sculpture" />
+                <circle key={i} cx={HALL.zStart - s.z} cy={s.x + HALL.halfW} r="0.65" className="minimap__sculpture" />
               ))}
               {exhibits.map((e) => (
                 <rect
                   key={e.product.id}
-                  x={HALL.zStart - e.position[2] - 0.9}
-                  y={e.side === -1 ? 0 : HALL.halfW * 2 - 0.5}
-                  width="1.8"
-                  height="0.5"
+                  x={HALL.zStart - e.position[2] - 0.8}
+                  y={e.side === -1 ? 0 : HALL.halfW * 2 - 0.55}
+                  width="1.6"
+                  height="0.55"
                   className={`minimap__art ${selected === e.product.id ? 'is-active' : ''}`}
                 />
               ))}
               <g ref={minimapPlayer}>
-                <path d="M1.4 0 L-0.8 -0.9 L-0.4 0 L-0.8 0.9 Z" className="minimap__player" />
+                <path d="M1.6 0 L-0.9 -1.0 L-0.4 0 L-0.9 1.0 Z" className="minimap__player" />
               </g>
             </svg>
           </figure>
@@ -291,24 +325,24 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
             {showHelp && (
               <motion.div className="museum__help" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}>
                 <ul className="museum__keys">
-                  <li><kbd>Arrastrar</kbd> mirar</li>
-                  <li><kbd>Clic</kbd> piso: caminar · obra: abrir</li>
-                  <li><kbd>WASD</kbd> / flechas: moverse</li>
-                  <li><kbd>N</kbd> <kbd>P</kbd> obra siguiente / anterior</li>
+                  <li><kbd>Arrastrar</kbd> mirar alrededor</li>
+                  <li><kbd>Clic</kbd> piso: caminar · obra: inspeccionar marquilla</li>
+                  <li><kbd>WASD</kbd> / flechas: caminar libremente</li>
+                  <li><kbd>N</kbd> <kbd>P</kbd> obra siguiente / anterior (30 piezas)</li>
                   <li><kbd>Esc</kbd> cerrar ficha</li>
                 </ul>
               </motion.div>
             )}
           </AnimatePresence>
 
-          {/* ───────── Ficha de la obra ───────── */}
+          {/* ───────── Ficha de la obra con Zoom-Out a la Marquilla ───────── */}
           <AnimatePresence>
             {selected && <ProductPanel key={selected} id={selected} reduced={reduced} onClose={() => setSelected(null)} />}
           </AnimatePresence>
 
           {hovered && !selected && (
             <div className="museum__hint" aria-hidden="true">
-              {getProduct(hovered).name} · clic para abrir
+              {getProduct(hovered)?.name} · clic para ver marquilla y talla
             </div>
           )}
         </>
@@ -322,11 +356,22 @@ function ProductPanel({ id, reduced, onClose }) {
   const { add } = useCart()
   const [size, setSize] = useState(null)
   const [state, setState] = useState('idle')
+  const [zoomTag, setZoomTag] = useState(true)
   const img = useRef(null)
+
+  const tagX = p.tagPos?.x ?? 50
+  const tagY = p.tagPos?.y ?? 18
+
+  const handleSelectSize = (s) => {
+    setSize(s)
+    // Hace zoom-out de la marquilla al elegir la talla
+    setTimeout(() => setZoomTag(false), 200)
+  }
 
   const handleAdd = () => {
     if (!size) {
       setState('error')
+      setZoomTag(true)
       setTimeout(() => setState('idle'), 600)
       return
     }
@@ -348,34 +393,68 @@ function ProductPanel({ id, reduced, onClose }) {
       <button className="icon-btn panel__close" onClick={onClose} aria-label="Cerrar ficha">
         <CloseIcon />
       </button>
-      <div className="panel__head">
-        <img ref={img} src={p.img.replace('.webp', '-sm.webp')} alt="" width="400" height="533" />
-        <div>
-          <p className="eyebrow">{rooms[p.room].name}</p>
-          <h2 className="panel__title">{p.name}</h2>
-          <p className="panel__price">{formatPrice(p.price)}</p>
-        </div>
+
+      <div className="panel__marquilla-preview">
+        <motion.img
+          ref={img}
+          src={p.img.replace('.webp', '-sm.webp')}
+          alt={p.name}
+          width="420"
+          height="560"
+          style={{ transformOrigin: `${tagX}% ${tagY}%` }}
+          initial={reduced ? { scale: 1 } : { scale: 2.35 }}
+          animate={{ scale: zoomTag && !reduced ? 1.55 : 1 }}
+          transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+        />
+        <button type="button" className="panel__tag-btn" onClick={() => setZoomTag((z) => !z)}>
+          <TagIcon width={13} height={13} /> {zoomTag ? 'Zoom-out prenda' : 'Zoom marquilla'}
+        </button>
       </div>
+
+      <div>
+        <p className="eyebrow">{rooms[p.room].name} · {p.brand}</p>
+        <h2 className="panel__title">{p.name}</h2>
+        <p className="panel__price">{formatPrice(p.price)}</p>
+      </div>
+
       <p className="panel__desc">{p.description}</p>
+
       <fieldset className={`sizes sizes--sm ${state === 'error' ? 'is-error' : ''}`}>
         <legend>
-          Talla {state === 'error' && <span className="sizes__hint" role="alert">· Elige una talla</span>}
+          <TagIcon width={14} height={14} /> Marquilla de talla{' '}
+          {state === 'error' && (
+            <span className="sizes__hint" role="alert">
+              · Elige una talla
+            </span>
+          )}
         </legend>
-        <motion.div className="sizes__row" animate={state === 'error' && !reduced ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }} transition={{ duration: 0.4 }}>
+        <motion.div
+          className="sizes__row"
+          animate={state === 'error' && !reduced ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+          transition={{ duration: 0.4 }}
+        >
           {p.sizes.map((s) => (
-            <label key={s} className={`size ${size === s ? 'size--active' : ''}`}>
-              <input type="radio" name="panel-size" value={s} checked={size === s} onChange={() => setSize(s)} className="sr-only" />
+            <label key={s} className={`size ${size === s ? 'size--active' : ''}`} onClick={() => handleSelectSize(s)}>
+              <input
+                type="radio"
+                name="panel-size"
+                value={s}
+                checked={size === s}
+                onChange={() => handleSelectSize(s)}
+                className="sr-only"
+              />
               {size === s && <motion.span layoutId="panel-size-pill" className="size__pill" />}
               <span className="size__label">{s}</span>
             </label>
           ))}
         </motion.div>
       </fieldset>
+
       <div className="panel__actions">
         <motion.button className="btn btn--primary btn--block" onClick={handleAdd} whileTap={{ scale: 0.96 }}>
           {state === 'done' ? (
             <>
-              <CheckIcon width={18} height={18} /> Añadido
+              <CheckIcon width={18} height={18} /> Sellado en carrito
             </>
           ) : (
             <>
@@ -384,7 +463,7 @@ function ProductPanel({ id, reduced, onClose }) {
           )}
         </motion.button>
         <Link to={`/producto/${p.id}`} className="btn btn--ghost btn--block">
-          Ver ficha completa
+          Ver ficha completa y marquilla
         </Link>
       </div>
     </motion.aside>

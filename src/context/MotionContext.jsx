@@ -2,29 +2,20 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { MotionConfig } from 'framer-motion'
 
 /**
- * Accesibilidad de movimiento.
- * - Lee la preferencia del sistema (prefers-reduced-motion).
- * - Permite al usuario forzarla desde el sitio (botón en el header).
- * - Expone `reduced` a toda la app (GSAP y la escena 3D lo consultan),
- *   configura Framer Motion y marca <html data-reduced-motion> para el CSS.
+ * Control de movimiento y accesibilidad.
+ * - Por defecto mantiene las animaciones activas en PC y móvil para preservar
+ *   la experiencia interactiva (museo 3D, zoom a la marquilla y carrito dinámico),
+ *   a menos que el usuario active manualmente el modo de movimiento reducido
+ *   con el botón situado al lado del carrito (ícono de onda / línea horizontal).
  */
 const MotionCtx = createContext({ reduced: false, toggle: () => {} })
 
-const query = '(prefers-reduced-motion: reduce)'
-const STORAGE_KEY = 'vestigio-motion'
+const STORAGE_KEY = 'vestigio-motion-v2'
 
 export function MotionProvider({ children }) {
-  const [systemReduced, setSystemReduced] = useState(() => window.matchMedia(query).matches)
-  const [userPref, setUserPref] = useState(() => localStorage.getItem(STORAGE_KEY)) // 'reduce' | 'full' | null
+  const [userPref, setUserPref] = useState(() => localStorage.getItem(STORAGE_KEY) || 'full') // 'reduce' | 'full'
 
-  useEffect(() => {
-    const mq = window.matchMedia(query)
-    const onChange = (e) => setSystemReduced(e.matches)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [])
-
-  const reduced = userPref ? userPref === 'reduce' : systemReduced
+  const reduced = userPref === 'reduce'
 
   useEffect(() => {
     document.documentElement.dataset.reducedMotion = String(reduced)

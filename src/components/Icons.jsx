@@ -1,4 +1,4 @@
-// Íconos SVG propios (trazo 1.5px, esquinas rectas) para mantener el peso bajo.
+// Íconos SVG propios (trazo 1.5px) diseñados para VESTIGIO.
 const base = {
   width: 22,
   height: 22,
@@ -6,15 +6,29 @@ const base = {
   fill: 'none',
   stroke: 'currentColor',
   strokeWidth: 1.5,
+  strokeLinecap: 'round',
+  strokeLinejoin: 'round',
   'aria-hidden': true,
 }
 
-export const BagIcon = (p) => (
+export const CartIcon = (p) => (
   <svg {...base} {...p}>
-    <path d="M5 8h14l-1 13H6L5 8Z" />
-    <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    <path d="M2.5 4h2.8l2.4 10.5a1.5 1.5 0 0 0 1.46 1.16h8.9a1.5 1.5 0 0 0 1.44-1.08L21.5 7.5H6.1" />
+    <circle className="cart-wheel cart-wheel--left" cx="9.5" cy="19.5" r="1.75" />
+    <circle className="cart-wheel cart-wheel--right" cx="17.5" cy="19.5" r="1.75" />
   </svg>
 )
+
+// Alias por compatibilidad
+export const BagIcon = CartIcon
+
+export const TagIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M4 7a2 2 0 0 1 2-2h6.6a2 2 0 0 1 1.4.58l5.4 5.4a2 2 0 0 1 0 2.83l-5.6 5.6a2 2 0 0 1-2.83 0l-5.4-5.4A2 2 0 0 1 5 12.6V7Z" />
+    <circle cx="9" cy="9" r="1.25" fill="currentColor" />
+  </svg>
+)
+
 export const MenuIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M3 8h18M3 16h18" />

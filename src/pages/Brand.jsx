@@ -4,17 +4,19 @@ import Logo from '../components/Logo.jsx'
 import { useMotionPref } from '../context/MotionContext.jsx'
 
 const palette = [
-  { name: 'Carbón', hex: '#0E0D0C', use: 'Fondo principal, "la sala oscura"' },
-  { name: 'Hueso', hex: '#EFE9DF', use: 'Texto y superficies claras' },
-  { name: 'Terracota', hex: '#D9643A', use: 'Acción principal, acentos' },
-  { name: 'Oro viejo', hex: '#C9A45C', use: 'Detalles, precios destacados' },
-  { name: 'Piedra', hex: '#A39C91', use: 'Texto secundario' },
-  { name: 'Grafito', hex: '#201D1A', use: 'Tarjetas y paneles' },
+  { name: 'Granito Abisal', hex: '#121514', use: 'Fondo principal del pórtico y salas' },
+  { name: 'Mármol Pentélico', hex: '#F2EFE9', use: 'Texto principal y relieves claros' },
+  { name: 'Laurel Botánico', hex: '#5E9E7E', use: 'Acción principal, plantas y acentos' },
+  { name: 'Bronce de Delfos', hex: '#C8B07A', use: 'Precios, marquillas y foco de teclado' },
+  { name: 'Ceniza de Olivo', hex: '#A3ADA6', use: 'Texto secundario y piedra erosionada' },
+  { name: 'Granito Labrado', hex: '#242B28', use: 'Tarjetas, pedestales y paneles' },
 ]
 
 // Contraste WCAG 2.x
 const lum = (hex) => {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
+  const [r, g, b] = [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4))
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 const contrast = (a, b) => {
@@ -23,10 +25,10 @@ const contrast = (a, b) => {
 }
 
 const motionTokens = [
-  { name: 'Entrada', css: 'cubic-bezier(0.22, 1, 0.36, 1)', ease: [0.22, 1, 0.36, 1], dur: 0.6, use: 'Elementos que llegan: rápido al inicio, se posan suave' },
-  { name: 'Telón', css: 'cubic-bezier(0.76, 0, 0.24, 1)', ease: [0.76, 0, 0.24, 1], dur: 0.5, use: 'Transiciones de página y menús: peso y solemnidad' },
-  { name: 'Recorrido', css: 'power2.inOut', ease: [0.45, 0, 0.55, 1], dur: 1.4, use: 'Cámara del museo: acelera y frena como un visitante' },
-  { name: 'Rebote', css: 'spring(600, 14)', spring: true, use: 'Feedback del carrito: confirma la acción con energía' },
+  { name: 'Zoom Marquilla', css: 'cubic-bezier(0.22, 1, 0.36, 1)', ease: [0.22, 1, 0.36, 1], dur: 0.75, use: 'Zoom-out desde la marquilla tejida al elegir la talla' },
+  { name: 'Telón Helénico', css: 'cubic-bezier(0.76, 0, 0.24, 1)', ease: [0.76, 0, 0.24, 1], dur: 0.5, use: 'Transiciones de sala y menús con peso arquitectónico' },
+  { name: 'Carrera Carrito', css: 'cubic-bezier(0.22, 0.88, 0.38, 1)', ease: [0.22, 0.88, 0.38, 1], dur: 0.78, use: 'Sprint dinámico del carrito frente a la pantalla' },
+  { name: 'Sello Archivo', css: 'spring(600, 14)', spring: true, use: 'Cápsula 3D y rebote del carrito al añadir una pieza' },
 ]
 
 function EaseDemo({ token }) {
@@ -51,13 +53,13 @@ export default function Brand() {
   return (
     <main id="main" className="page container brand">
       <header className="page__head">
-        <p className="eyebrow">Guía de marca · 1 página</p>
+        <p className="eyebrow">Sistema de Diseño · Estilo Griego & Botánica</p>
         <h1 className="h1">
           Identidad <em>VESTIGIO</em>
         </h1>
         <p className="page__lead">
-          Moda contemporánea inspirada en fragmentos arqueológicos. Público: 20–35 años, urbano, amante del arte y el diseño,
-          que compra menos pero mejor.
+          Paleta inspirada en el granito helénico, el mármol del Pentélico y la vegetación mediterránea (olivos, laureles y
+          musgo), diseñada para exhibir archivo de streetwear e historia.
         </p>
       </header>
 
@@ -65,26 +67,35 @@ export default function Brand() {
         <article className="brand__block brand__block--logo">
           <h2 className="brand__label">Logotipo</h2>
           <div className="brand__logos">
-            <div className="brand__logo-box"><Logo animated /></div>
-            <div className="brand__logo-box brand__logo-box--light"><Logo /></div>
+            <div className="brand__logo-box">
+              <Logo animated />
+            </div>
+            <div className="brand__logo-box brand__logo-box--light">
+              <Logo />
+            </div>
           </div>
-          <p>La “V” es un pórtico partido apoyado sobre una línea terracota: el pedestal donde se exhibe la pieza. Área de respeto: la altura de la V.</p>
+          <p>
+            La «V» es un pórtico dórico apoyado sobre un estilóbato en verde laurel botánico: el pedestal donde dialogan la
+            antigüedad clásica y el streetwear de culto.
+          </p>
         </article>
 
         <article className="brand__block">
           <h2 className="brand__label">Tipografía</h2>
-          <p className="brand__type-display">Fraunces <em>Italic</em></p>
-          <p className="brand__type-meta">Display · titulares, cifras grandes · serif variable con carácter editorial</p>
-          <p className="brand__type-body">Inter — texto de interfaz, botones y párrafos. Legible en pantallas pequeñas.</p>
-          <p className="brand__type-meta">Ambas con licencia SIL Open Font License, alojadas localmente.</p>
+          <p className="brand__type-display">
+            Fraunces <em>Italic</em>
+          </p>
+          <p className="brand__type-meta">Display · titulares monumentales e inscripciones de sala</p>
+          <p className="brand__type-body">Inter — interfaz, marquillas técnicas, precios y fichas de conservación.</p>
+          <p className="brand__type-meta">Alojadas localmente con carga instantánea.</p>
         </article>
 
         <article className="brand__block brand__block--wide">
-          <h2 className="brand__label">Paleta y contraste (WCAG)</h2>
+          <h2 className="brand__label">Paleta Griega: Granito & Plantas (Contraste WCAG)</h2>
           <ul className="palette">
             {palette.map((c) => {
-              const onDark = contrast(c.hex, '#0E0D0C')
-              const onLight = contrast(c.hex, '#EFE9DF')
+              const onDark = contrast(c.hex, '#121514')
+              const onLight = contrast(c.hex, '#F2EFE9')
               return (
                 <li key={c.hex} className="palette__item">
                   <span className="palette__swatch" style={{ background: c.hex }} />
@@ -92,8 +103,8 @@ export default function Brand() {
                   <code>{c.hex}</code>
                   <span className="palette__use">{c.use}</span>
                   <span className="palette__ratio">
-                    {c.hex !== '#0E0D0C' && `sobre Carbón ${onDark.toFixed(1)}:1`}
-                    {c.hex === '#0E0D0C' && `sobre Hueso ${onLight.toFixed(1)}:1`}
+                    {c.hex !== '#121514' && `sobre Granito ${onDark.toFixed(1)}:1`}
+                    {c.hex === '#121514' && `sobre Mármol ${onLight.toFixed(1)}:1`}
                   </span>
                 </li>
               )
@@ -102,16 +113,22 @@ export default function Brand() {
         </article>
 
         <article className="brand__block">
-          <h2 className="brand__label">Tono de voz</h2>
+          <h2 className="brand__label">Curaduría & Tono</h2>
           <ul className="brand__list">
-            <li><strong>Curador, no vendedor.</strong> Contamos el origen de cada pieza.</li>
-            <li><strong>Pausado.</strong> Frases cortas, sin mayúsculas gritadas ni urgencia falsa.</li>
-            <li><strong>Cercano.</strong> Tuteamos: “recorre”, “elige”, “escríbenos”.</li>
+            <li>
+              <strong>Rigor histórico.</strong> Documentamos el año, diseñador y contexto cultural de cada prenda y sneaker.
+            </li>
+            <li>
+              <strong>Arquitectura natural.</strong> El granito tallado y el follaje botánico enmarcan cada pieza sin saturar.
+            </li>
+            <li>
+              <strong>Interacción táctil.</strong> Marquilla tejida interactiva y carrito dinámico.
+            </li>
           </ul>
         </article>
 
         <article className="brand__block">
-          <h2 className="brand__label">Movimiento {reduced && '(reducido activo)'}</h2>
+          <h2 className="brand__label">Movimiento {reduced && '(modo estático activo)'}</h2>
           <ul className="tokens">
             {motionTokens.map((t) => (
               <li key={t.name}>
@@ -123,7 +140,7 @@ export default function Brand() {
               </li>
             ))}
           </ul>
-          <p className="brand__type-meta">Toca cada barra para ver la curva.</p>
+          <p className="brand__type-meta">Toca cada barra para previsualizar la curva cinética.</p>
         </article>
       </section>
     </main>

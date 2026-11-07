@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useReducer,
 import { getProduct } from '../data/products.js'
 
 /**
- * Carrito simulado: vive en el navegador (localStorage), sin pasarela de pagos.
+ * Estado global del carrito de compras persistido en localStorage.
  * Cada línea es { id, size, qty }.
  */
 const CartCtx = createContext(null)
