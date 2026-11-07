@@ -3,3 +3,6 @@ dist
 .DS_Store
 *.log
 .vite
+
+assets-src
+publicar-en-github.bat
