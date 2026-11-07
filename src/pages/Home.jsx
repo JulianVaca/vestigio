@@ -5,56 +5,106 @@ import { products, rooms, getProduct, formatPrice } from '../data/products.js'
 import { sneakers, getMarket, formatPct } from '../data/market.js'
 import ProductCard from '../components/ProductCard.jsx'
 import BoutiqueRack from '../components/BoutiqueRack.jsx'
+import Deferred from '../components/Deferred.jsx'
 import { OliveBranch } from '../components/Ornaments.jsx'
 import { ArrowIcon, CubeIcon } from '../components/Icons.jsx'
-import { useScrollAnimations, loadGsap } from '../hooks/useScrollAnimations.js'
+import { useScrollAnimations, loadGsap, onFirstInteraction } from '../hooks/useScrollAnimations.js'
 import { useMotionPref } from '../context/MotionContext.jsx'
 
-const HERO_PIECES = ['bbc-icecream-varsity', 'offwhite-caravaggio-varsity', 'base-doric-hoodie', 'bape-m65-laurel'].map(getProduct)
+const HERO_PIECES = ['bbc-icecream-varsity', 'offwhite-caravaggio-varsity', 'bape-m65-laurel', 'raf-riot-bomber'].map(getProduct)
+const SIDE_LEFT = getProduct('sneaker-bapesta-marble')
+const SIDE_RIGHT = getProduct('base-doric-hoodie')
 const HERO_MS = 5200
 
-/** Nicho en arco de travertino con la prenda destacada colgada en percha dorada. */
-function HeroNiche({ reduced }) {
+/** Arco lateral menor de la columnata (imagen ligera -sm, sin prioridad). */
+function SideArch({ product, side }) {
+  return (
+    <Link to={`/producto/${product.id}`} className={`colonnade__arch colonnade__arch--${side}`} aria-label={product.name}>
+      <img
+        src={product.img.replace('.webp', '-sm.webp')}
+        alt=""
+        width="420"
+        height="560"
+        fetchpriority="low"
+        decoding="async"
+      />
+      <span className="colonnade__caption">{product.name.split('«')[1]?.split('»')[0] ?? product.name}</span>
+    </Link>
+  )
+}
+
+/**
+ * Columnata «tríptico»: arco central con la prenda destacada y dos arcos menores
+ * sobre un estilóbato de travertino, separados por columnas con capitel dorado.
+ * Rendimiento: al cargar sólo existe la imagen LCP; la rotación (y la descarga de
+ * la siguiente pieza) empieza con la primera interacción o tras 4 s.
+ */
+function HeroColonnade({ reduced }) {
   const [i, setI] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [armed, setArmed] = useState(false)
 
   useEffect(() => {
-    if (reduced || paused) return
+    if (reduced) return
+    const t = setTimeout(() => setArmed(true), 4000)
+    const off = onFirstInteraction(() => setArmed(true))
+    return () => {
+      clearTimeout(t)
+      off()
+    }
+  }, [reduced])
+
+  useEffect(() => {
+    if (!armed || paused) return
     const id = setInterval(() => setI((v) => (v + 1) % HERO_PIECES.length), HERO_MS)
     return () => clearInterval(id)
-  }, [reduced, paused])
+  }, [armed, paused])
 
+  const n = HERO_PIECES.length
+  const prev = (i - 1 + n) % n
+  const next = (i + 1) % n
+  // Sólo se montan la pieza visible, la anterior (fundido) y la siguiente (precarga)
+  const mounted = armed ? new Set([i, prev, next]) : new Set([0])
   const p = HERO_PIECES[i]
+
   return (
     <div
-      className="hero__media atrium__stage"
+      className="hero__media colonnade"
       onPointerEnter={() => setPaused(true)}
       onPointerLeave={() => setPaused(false)}
     >
-      <OliveBranch className="atrium__olive atrium__olive--l" />
-      <OliveBranch className="atrium__olive atrium__olive--r" flip />
-      <div className="atrium__niche">
-        <span className="atrium__glow" aria-hidden="true" />
-        {HERO_PIECES.map((piece, k) => (
-          <img
-            key={piece.id}
-            className={`atrium__piece ${k === i ? 'is-active' : ''}`}
-            src={piece.img}
-            srcSet={`${piece.img.replace('.webp', '-sm.webp')} 420w, ${piece.img} 840w`}
-            sizes="(max-width: 860px) 70vw, 34vw"
-            alt={k === i ? `${piece.name} en el nicho de exhibición` : ''}
-            aria-hidden={k !== i}
-            width="840"
-            height="1120"
-            fetchpriority={k === 0 ? 'high' : 'low'}
-            loading={k === 0 ? 'eager' : 'lazy'}
-            decoding={k === 0 ? 'sync' : 'async'}
-          />
-        ))}
-      </div>
-      <div className="atrium__plinth" aria-hidden="true" />
+      <OliveBranch className="colonnade__olive colonnade__olive--l" />
+      <OliveBranch className="colonnade__olive colonnade__olive--r" flip />
 
-      <Link to={`/producto/${p.id}`} className="atrium__tag">
+      <div className="colonnade__row">
+        <SideArch product={SIDE_LEFT} side="left" />
+        <span className="colonnade__column" aria-hidden="true" />
+        <div className="colonnade__arch colonnade__arch--main atrium__niche">
+          <span className="atrium__glow" aria-hidden="true" />
+          {HERO_PIECES.map((piece, k) =>
+            mounted.has(k) ? (
+              <img
+                key={piece.id}
+                className={`atrium__piece ${k === i ? 'is-active' : ''}`}
+                src={piece.img}
+                srcSet={`${piece.img.replace('.webp', '-sm.webp')} 420w, ${piece.img} 840w`}
+                sizes="(max-width: 860px) 60vw, 26vw"
+                alt={k === i ? `${piece.name} en el arco central de la columnata` : ''}
+                aria-hidden={k !== i}
+                width="840"
+                height="1120"
+                fetchpriority={k === 0 ? 'high' : 'low'}
+                decoding="async"
+              />
+            ) : null,
+          )}
+        </div>
+        <span className="colonnade__column" aria-hidden="true" />
+        <SideArch product={SIDE_RIGHT} side="right" />
+      </div>
+      <div className="colonnade__stylobate" aria-hidden="true" />
+
+      <Link to={`/producto/${p.id}`} className="atrium__tag colonnade__tag">
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={p.id}
@@ -64,7 +114,7 @@ function HeroNiche({ reduced }) {
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3 }}
           >
-            <span className="atrium__tag-kicker">Pieza en nicho · {String(i + 1).padStart(2, '0')}</span>
+            <span className="atrium__tag-kicker">Arco central · {String(i + 1).padStart(2, '0')}</span>
             <span className="atrium__tag-name">{p.name}</span>
             <span className="atrium__tag-price">{formatPrice(p.price)}</span>
           </motion.span>
@@ -80,7 +130,10 @@ function HeroNiche({ reduced }) {
             className={k === i ? 'is-active' : ''}
             aria-label={`Ver ${piece.name}`}
             aria-pressed={k === i}
-            onClick={() => setI(k)}
+            onClick={() => {
+              setArmed(true)
+              setI(k)
+            }}
           />
         ))}
       </div>
@@ -96,13 +149,14 @@ export default function Home() {
   const { reduced } = useMotionPref()
   useScrollAnimations(scope)
 
+  // Efectos con scrub (GSAP): se descargan con la primera interacción, nunca durante la carga
   useEffect(() => {
     if (reduced) return
     let ctx
     let onMove
     let cancelled = false
 
-    loadGsap().then(({ gsap }) => {
+    const off = onFirstInteraction(() => loadGsap().then(({ gsap }) => {
       if (cancelled || !scope.current) return
       ctx = gsap.context(() => {
         gsap.to('.hero__content', {
@@ -150,10 +204,11 @@ export default function Home() {
         }
         window.addEventListener('pointermove', onMove)
       }
-    })
+    }))
 
     return () => {
       cancelled = true
+      off()
       if (onMove) window.removeEventListener('pointermove', onMove)
       ctx?.revert()
     }
@@ -221,7 +276,7 @@ export default function Home() {
             </dl>
           </div>
 
-          <HeroNiche reduced={reduced} />
+          <HeroColonnade reduced={reduced} />
         </div>
 
         <div className="meander" aria-hidden="true" />
@@ -250,16 +305,20 @@ export default function Home() {
         </p>
       </section>
 
+      {/* Secciones bajo el pliegue: cada una se monta en su propia tarea ociosa (TBT) */}
       {/* ───────────── PERCHERO INTERACTIVO EN PORTADA ───────────── */}
-      <div className="container">
-        <BoutiqueRack
-          items={featured}
-          title="Perchero de Selección · 8 Piezas Clave"
-          subtitle="Desliza las perchas como en nuestra boutique física o entra al catálogo completo para recorrer los 5 racks."
-        />
-      </div>
+      <Deferred minHeight={760}>
+        <div className="container">
+          <BoutiqueRack
+            items={featured}
+            title="Perchero de Selección · 8 Piezas Clave"
+            subtitle="Desliza las perchas como en nuestra boutique física o entra al catálogo completo para recorrer los 5 racks."
+          />
+        </div>
+      </Deferred>
 
       {/* ───────────── DESTACADOS ───────────── */}
+      <Deferred minHeight={900}>
       <section className="section container" aria-labelledby="featured-title">
         <div className="section__head" data-reveal>
           <div>
@@ -278,8 +337,10 @@ export default function Home() {
           ))}
         </div>
       </section>
+      </Deferred>
 
       {/* ───────────── MERCADO DE SNEAKERS (teaser) ───────────── */}
+      <Deferred minHeight={700}>
       <section className="market-teaser" aria-labelledby="market-title">
         <div className="container">
           <div className="section__head" data-reveal>
@@ -315,8 +376,10 @@ export default function Home() {
           </ul>
         </div>
       </section>
+      </Deferred>
 
-      {/* ───────────── TEASER MUSEO (corredor CSS 3D) ───────────── */}
+      {/* ───────────── TEASER MUSEO, SALAS Y CTA ───────────── */}
+      <Deferred minHeight={1600}>
       <section className="teaser" aria-labelledby="teaser-title">
         <div className="corridor" aria-hidden="true">
           <div className="corridor__track">
@@ -389,6 +452,7 @@ export default function Home() {
           Contactar al atelier <ArrowIcon width={18} height={18} />
         </Link>
       </section>
+      </Deferred>
     </main>
   )
 }

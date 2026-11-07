@@ -1,5 +1,32 @@
 # Registro de Cambios (Changelog) — VESTIGIO
 
+## [2.3.0] — Rendimiento Lighthouse y portada «Columnata» (2026-11-07)
+
+Medido con Lighthouse 12 sobre la build de producción (portada):
+
+| | Antes | Después |
+|---|---|---|
+| Escritorio | 65 · TBT 2.260 ms | **96–99** · TBT 20–150 ms |
+| Móvil | 47 · TBT 810 ms | **84–85** · TBT 210–250 ms |
+
+### Rendimiento de la web
+- **Three.js fuera de la portada.** La regla `manualChunks` de `vite.config.js` metía módulos compartidos en `vendor-three`, así que todas las páginas descargaban y ejecutaban 925 KB de Three.js. Ahora sólo los carga el museo.
+- **Apariciones al hacer scroll sin GSAP.** `useScrollAnimations` usa `IntersectionObserver` + transiciones CSS (sin forzar layout). GSAP sólo se descarga para los efectos con scrub de la portada, y únicamente tras la primera interacción del visitante.
+- **Render progresivo de la portada (`Deferred.jsx`).** Las secciones bajo el pliegue se montan cada una en su propia tarea ociosa (`requestIdleCallback`) en lugar de una única tarea larga.
+- **`content-visibility: auto`** en secciones fuera de pantalla: el navegador no calcula su estilo ni su layout hasta que te acercas.
+- Hero: sin filtro SVG de ruido, decodificación asíncrona, animaciones de entrada sólo con `transform` (LCP inmediato) y una sola imagen al cargar; las demás se montan al interactuar.
+- Cabeceras de caché largas para `/assets` e `/img` en `vercel.json` y `netlify.toml` (GitHub Pages no permite configurarlas).
+
+### Museo 3D
+- Percha fusionada en una geometría (3 → 1 draw call por obra).
+- Halos de luz instanciados (30 → 1 draw call).
+- Las 30 etiquetas de precio en un único atlas de textura y una malla fusionada (30 texturas y 30 draw calls → 1).
+- Minimapa: el DOM del HUD sólo se actualiza cuando cambia la pose (antes, en cada fotograma).
+
+### Portada «Columnata»
+- El nicho único se reemplaza por un tríptico de arcos sobre un estilóbato de travertino: prenda destacada en el arco central (rotativa), sneaker y hoodie en los arcos menores, columnas con capitel dorado.
+- La etiqueta de la pieza pasa debajo del estilóbato para no tapar la prenda.
+
 ## [2.2.0] — «Helénico Botánico Áureo» (2026-11-07)
 
 ### 1. Rendimiento del museo 3D en PC (`src/museum/`)

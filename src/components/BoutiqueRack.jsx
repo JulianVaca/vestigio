@@ -184,7 +184,7 @@ export default function BoutiqueRack({ items, title, subtitle }) {
                         alt=""
                         width="420"
                         height="560"
-                        loading={idx < 8 ? 'eager' : 'lazy'}
+                        loading="lazy"
                         decoding="async"
                         draggable={false}
                       />

@@ -23,15 +23,42 @@
     transform: translateY(105%);
   }
 }
+/* Sólo transform: el texto del hero se pinta desde el primer fotograma (LCP inmediato) */
 @keyframes heroRise {
   from {
     transform: translateY(18px);
-    opacity: 0;
   }
 }
 
 .header--on-dark .logo__base {
   stroke: var(--c-gold-500);
+}
+
+/* ---------- Rendimiento ---------- */
+/* Apariciones con IntersectionObserver (ver useScrollAnimations): sólo opacidad y transform */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition:
+    opacity 0.9s var(--ease-out),
+    transform 0.9s var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-revealed {
+  opacity: 1;
+  transform: none;
+}
+/* El navegador no calcula estilo/layout/pintura de secciones fuera de pantalla
+   hasta que el visitante se acerca (antes: ~3 s de "Style & Layout" en la carga) */
+.manifesto,
+.section,
+.market-teaser,
+.teaser,
+.cta,
+.footer,
+.vrack {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
 }
 
 /* ==========================================================================
@@ -57,14 +84,6 @@
     radial-gradient(55% 65% at 74% 46%, rgba(184, 150, 79, 0.24), transparent 70%),
     radial-gradient(50% 60% at 8% 100%, rgba(47, 107, 69, 0.38), transparent 70%),
     linear-gradient(180deg, #0f1a14 0%, #13221a 60%, #0f1a14 100%);
-}
-.atrium__bg::after {
-  /* grano mineral muy sutil (granito pulido) */
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0.08;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 .atrium__grid {
   display: grid;
@@ -166,15 +185,9 @@
     0 0 0 10px rgba(15, 26, 20, 0.65),
     0 0 0 11px rgba(220, 196, 142, 0.35),
     0 50px 90px -30px rgba(0, 0, 0, 0.75);
-  animation: nicheIn 1.2s var(--ease-out) both;
 }
-@keyframes nicheIn {
-  from {
-    clip-path: inset(100% 0 0 0 round 999px 999px 10px 10px);
-  }
-  to {
-    clip-path: inset(0 0 0 0 round 999px 999px 10px 10px);
-  }
+.colonnade__row {
+  animation: heroRise 1s var(--ease-out) 0.15s both;
 }
 .atrium__glow {
   position: absolute;
@@ -288,6 +301,129 @@
 .atrium__dots button.is-active {
   width: 44px;
   background-color: var(--c-gold-300);
+}
+
+/* ---------- Columnata (tríptico de arcos) ---------- */
+.colonnade {
+  position: relative;
+  justify-self: stretch;
+  width: 100%;
+  max-width: 600px;
+  margin-inline: auto;
+}
+.colonnade__row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.5fr) 12px minmax(0, 1.25fr) 12px minmax(0, 0.5fr);
+  align-items: end;
+  gap: clamp(0.5rem, 1.2vw, 0.9rem);
+}
+.colonnade__arch {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 3 / 4.4;
+  border-radius: 999px 999px 8px 8px;
+  background: #e9e1d1;
+  box-shadow:
+    0 0 0 1px rgba(220, 196, 142, 0.55),
+    0 0 0 7px rgba(15, 26, 20, 0.6),
+    0 0 0 8px rgba(220, 196, 142, 0.28),
+    0 40px 70px -30px rgba(0, 0, 0, 0.7);
+}
+.colonnade__arch--main {
+  aspect-ratio: 3 / 4;
+  z-index: 1;
+}
+.colonnade__arch--left,
+.colonnade__arch--right {
+  margin-bottom: 0;
+  opacity: 0.92;
+  transition:
+    opacity 0.4s,
+    transform 0.5s var(--ease-out);
+}
+.colonnade__arch--left:hover,
+.colonnade__arch--right:hover {
+  opacity: 1;
+  transform: translateY(-6px);
+}
+.colonnade__arch--left img,
+.colonnade__arch--right img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.colonnade__caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1.6rem 0.5rem 0.6rem;
+  text-align: center;
+  font-family: var(--f-display);
+  font-style: italic;
+  font-size: 0.82rem;
+  color: var(--c-ivory-on-dark);
+  background: linear-gradient(transparent, rgba(15, 26, 20, 0.75));
+}
+/* Columna dórica estilizada: fuste estriado + capitel y basa en oro */
+.colonnade__column {
+  position: relative;
+  align-self: stretch;
+  margin-top: 18%;
+  border-radius: 3px;
+  background:
+    repeating-linear-gradient(90deg, rgba(15, 26, 20, 0.18) 0 1px, transparent 1px 4px),
+    linear-gradient(90deg, #cfc4ae, #efe7d6 45%, #bfb39b);
+}
+.colonnade__column::before,
+.colonnade__column::after {
+  content: '';
+  position: absolute;
+  left: -5px;
+  right: -5px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--g-gold);
+}
+.colonnade__column::before {
+  top: -7px;
+}
+.colonnade__column::after {
+  bottom: 0;
+}
+.colonnade__stylobate {
+  height: 16px;
+  margin: 0 -3%;
+  border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, #e8dfcd, #b9ab92);
+  box-shadow:
+    0 6px 0 -2px #a39478,
+    0 26px 40px -14px rgba(0, 0, 0, 0.6);
+}
+.colonnade__olive {
+  position: absolute;
+  z-index: 3;
+  width: 120px;
+  color: var(--c-gold-500);
+  opacity: 0.85;
+  pointer-events: none;
+}
+.colonnade__olive--l {
+  left: -64px;
+  bottom: 40px;
+}
+.colonnade__olive--r {
+  right: -60px;
+  top: -10px;
+}
+/* Etiqueta bajo el estilóbato (no tapa la prenda) */
+.colonnade__tag {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  width: min(360px, 100%);
+  margin: 1.4rem auto 0;
 }
 
 /* Greca griega dorada */
@@ -485,7 +621,6 @@
   width: 128px;
   height: 46px;
   margin-bottom: -10px;
-  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.2));
 }
 .vrack__body {
   position: relative;
@@ -1730,21 +1865,17 @@
   .atrium__eyebrow {
     letter-spacing: 0.16em;
   }
-  .atrium__stage {
-    width: min(74vw, 360px);
+  .colonnade {
+    max-width: 460px;
   }
-  .atrium__olive {
-    width: 110px;
+  .colonnade__olive {
+    width: 90px;
   }
-  .atrium__olive--l {
-    left: -54px;
+  .colonnade__olive--l {
+    left: -40px;
   }
-  .atrium__olive--r {
-    right: -50px;
-  }
-  .atrium__tag {
-    left: -1.25rem;
-    bottom: 4.5rem;
+  .colonnade__olive--r {
+    right: -36px;
   }
   .vrack {
     --slot: 54px;
@@ -1779,10 +1910,14 @@
   .atrium__stats dt {
     font-size: 0.62rem;
   }
-  .atrium__tag {
-    left: -0.5rem;
-    bottom: 3.5rem;
+  .colonnade__tag {
     padding: 0.7rem 0.85rem;
+  }
+  .colonnade__caption {
+    display: none;
+  }
+  .colonnade__row {
+    grid-template-columns: minmax(0, 0.5fr) 9px minmax(0, 1.2fr) 9px minmax(0, 0.5fr);
   }
   .vrack {
     --slot: 46px;
@@ -1826,4 +1961,8 @@ html[data-reduced-motion='true'] .atrium__piece {
 }
 html[data-reduced-motion='true'] .atrium__niche {
   animation: none;
+}
+html[data-reduced-motion='true'] .reveal {
+  opacity: 1;
+  transform: none;
 }

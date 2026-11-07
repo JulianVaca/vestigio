@@ -2,6 +2,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 import * as THREE from 'three'
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { HALL, dividers, roomCenter, exhibits, ENTRANCE_SCULPTURE, DOOR_HALF, walkable } from './layout.js'
 import { roomTitleTexture, plaqueTexture, wallTextTexture, floorTexture, wallGraniteTexture, radialTexture } from './textures.js'
 import { rooms, formatPrice } from '../data/products.js'
@@ -15,9 +16,6 @@ const sharedRackPlinthGeo = new THREE.BoxGeometry(1.94, 0.16, 0.68)
 const sharedRackPostGeo = new THREE.CylinderGeometry(0.026, 0.026, 3.12, 12)
 const sharedRackBarGeo = new THREE.CylinderGeometry(0.028, 0.028, 1.84, 12)
 const sharedRackBracketGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.42, 8)
-const sharedHangerHookGeo = new THREE.TorusGeometry(0.055, 0.01, 8, 16, Math.PI * 1.35)
-const sharedHangerStemGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.14, 8)
-const sharedHangerBarGeo = new THREE.CylinderGeometry(0.016, 0.016, 0.92, 10)
 const sharedFrameGeo = new THREE.BoxGeometry(1.52, 2.02, 0.04)
 const sharedArtGeo = new THREE.PlaneGeometry(1.44, 1.92)
 const sharedPlaqueGeo = new THREE.PlaneGeometry(0.68, 0.34)
@@ -36,6 +34,24 @@ const sharedLampMat = new THREE.MeshBasicMaterial({ color: '#FFFDF7', side: THRE
 const sharedPedestalMat = new THREE.MeshStandardMaterial({ color: '#E2DBD0', roughness: 0.55, metalness: 0.06 })
 
 const poolTex = radialTexture('rgba(255, 248, 230, 0.55)', 'rgba(255, 248, 230, 0)')
+const sharedPoolMat = new THREE.MeshBasicMaterial({
+  map: poolTex,
+  transparent: true,
+  opacity: 0.3,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  toneMapped: false,
+})
+
+// Percha fusionada: gancho + vástago + hombros = 1 draw call por obra (antes 3)
+const hangerGeo = (() => {
+  const hook = new THREE.TorusGeometry(0.055, 0.01, 8, 16, Math.PI * 1.35).translate(0, 1.15, 0)
+  const stem = new THREE.CylinderGeometry(0.01, 0.01, 0.14, 8).translate(0, 1.05, 0)
+  const bar = new THREE.CylinderGeometry(0.016, 0.016, 0.92, 10).rotateZ(Math.PI / 2).translate(0, 0.98, 0)
+  // mergeGeometries exige los mismos atributos e índices en todas las piezas
+  const parts = [hook, stem, bar].map((g) => (g.index ? g.toNonIndexed() : g))
+  return mergeGeometries(parts)
+})()
 const shadowTex = radialTexture('rgba(35, 32, 26, 0.32)', 'rgba(35, 32, 26, 0)')
 const sharedShadowMat = new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })
 
@@ -128,8 +144,9 @@ const Scene = memo(function Scene({ reduced, onHover, onSelect, onFloorClick, on
       <BotanicalGarden />
       <WallTexts onNavigate={onNavigate} />
 
-      {/* Herrajes estáticos de los 30 racks: ~11 draw calls en total (antes ~360) */}
+      {/* Herrajes estáticos de los 30 racks instanciados + etiquetas fusionadas en un atlas */}
       <InstancedRackHardware />
+      <PlaqueAtlas />
 
       {exhibits.map((e, i) => (
         <Artwork key={e.product.id} exhibit={e} texture={textures[i]} onHover={onHover} onSelect={onSelect} />
@@ -178,6 +195,8 @@ const RACK_PARTS = [
   // Cono de luz y lámpara cenital
   { geo: sharedConeGeo, mat: coneMaterial, items: [[[0, 1.4, 0.95], [0.32, 0, 0]]] },
   { geo: sharedLampGeo, mat: sharedLampMat, items: [[[0, HALL.height - 2.0 - 0.01, 1.45], [Math.PI / 2, 0, 0]]] },
+  // Halo cálido sobre el muro de travertino
+  { geo: sharedPoolGeo, mat: sharedPoolMat, items: [[[0, 0.15, 0.01], [0, 0, 0]]] },
 ]
 
 function InstancedRackHardware() {
@@ -540,10 +559,8 @@ function CatalogLabel() {
 const Artwork = memo(function Artwork({ exhibit, texture, onHover, onSelect }) {
   const { product, position, rotationY } = exhibit
   const group = useRef()
-  const pool = useRef()
   // Hover local en ref: ni React ni las otras 29 obras se enteran del cambio
   const hoverRef = useRef(false)
-  const plaque = useMemo(() => plaqueTexture(product, formatPrice(product.price)), [product])
 
   useFrame((_, dt) => {
     if (!group.current) return
@@ -560,34 +577,17 @@ const Artwork = memo(function Artwork({ exhibit, texture, onHover, onSelect }) {
       group.current.scale.setScalar(s)
       group.current.position.z = THREE.MathUtils.lerp(group.current.position.z, targetZ, k)
       group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, targetRotY, k)
-      pool.current.opacity = THREE.MathUtils.lerp(pool.current.opacity, hovered ? 0.52 : 0.26, k)
     }
   })
 
   return (
     <group position={position} rotation-y={rotationY}>
-      {/* Halo cálido sobre el muro de travertino */}
-      <mesh position={[0, 0.15, 0.01]} geometry={sharedPoolGeo}>
-        <meshBasicMaterial
-          ref={pool}
-          map={poolTex}
-          transparent
-          opacity={0.26}
-          blending={THREE.AdditiveBlending}
-          depthWrite={false}
-          toneMapped={false}
-        />
-      </mesh>
-
-      {/* Base, postes, barra, soportes y prendas de fondo: ver <InstancedRackHardware /> */}
+      {/* Halo, base, postes, barra, soportes, prendas de fondo y etiquetas: instanciados/fusionados */}
 
       {/* Prenda principal colgada en su percha interactiva de bronce */}
       <group ref={group} position={[0, 0, 0.36]}>
-        {/* Gancho y hombros de la percha */}
-        <mesh position={[0, 1.15, 0]} geometry={sharedHangerHookGeo} material={sharedBronzeMat} />
-        <mesh position={[0, 1.05, 0]} geometry={sharedHangerStemGeo} material={sharedBronzeMat} />
-        <mesh position={[0, 0.98, 0]} rotation-z={Math.PI / 2} geometry={sharedHangerBarGeo} material={sharedDarkBronzeMat} />
-
+        {/* Percha (gancho + vástago + hombros) fusionada en una sola geometría */}
+        <mesh geometry={hangerGeo} material={sharedBronzeMat} />
         {/* Portaprenda rígido del atelier */}
         <mesh position={[0, -0.04, 0]} geometry={sharedFrameGeo} material={sharedFrameMat} />
 
@@ -615,14 +615,61 @@ const Artwork = memo(function Artwork({ exhibit, texture, onHover, onSelect }) {
           <meshBasicMaterial map={texture} toneMapped={false} />
         </mesh>
       </group>
-
-      {/* Etiqueta de precio y tallas sobre el atril (el poste está instanciado) */}
-      <mesh position={[1.28, -0.78, 0.38]} geometry={sharedPlaqueGeo}>
-        <meshBasicMaterial map={plaque} toneMapped={false} />
-      </mesh>
     </group>
   )
 })
+
+/* ───────────── Etiquetas de los 30 racks: un atlas de textura + una sola malla fusionada ───────────── */
+const PLAQUE_COLS = 4
+const PLAQUE_ROWS = 8 // 4 × 8 celdas de 512×256 → atlas 2048×2048 (30 usadas)
+function PlaqueAtlas() {
+  const { geometry, material } = useMemo(() => {
+    const atlas = document.createElement('canvas')
+    atlas.width = 512 * PLAQUE_COLS
+    atlas.height = 256 * PLAQUE_ROWS
+    const ctx = atlas.getContext('2d')
+    const parent = new THREE.Object3D()
+    const child = new THREE.Object3D()
+    const parts = exhibits.map((e, i) => {
+      const col = i % PLAQUE_COLS
+      const row = Math.floor(i / PLAQUE_COLS)
+      const single = plaqueTexture(e.product, formatPrice(e.product.price))
+      ctx.drawImage(single.image, col * 512, row * 256)
+      single.dispose()
+
+      const g = sharedPlaqueGeo.clone()
+      const uv = g.attributes.uv
+      for (let k = 0; k < uv.count; k++) {
+        uv.setXY(k, (col + uv.getX(k)) / PLAQUE_COLS, 1 - (row + 1) / PLAQUE_ROWS + uv.getY(k) / PLAQUE_ROWS)
+      }
+      parent.position.set(e.position[0], e.position[1], e.position[2])
+      parent.rotation.set(0, e.rotationY, 0)
+      parent.updateMatrix()
+      child.position.set(1.28, -0.78, 0.38)
+      child.updateMatrix()
+      child.matrix.premultiply(parent.matrix)
+      g.applyMatrix4(child.matrix)
+      return g
+    })
+    const tex = new THREE.CanvasTexture(atlas)
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.anisotropy = 4
+    const merged = mergeGeometries(parts)
+    parts.forEach((p) => p.dispose())
+    return { geometry: merged, material: new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }) }
+  }, [])
+
+  useEffect(
+    () => () => {
+      geometry.dispose()
+      material.map.dispose()
+      material.dispose()
+    },
+    [geometry, material],
+  )
+
+  return <mesh geometry={geometry} material={material} frustumCulled={false} />
+}
 
 /* ───────────────────────────── Esculturas Centrales (Vestíbulo + 5 Salas) ───────────────────────────── */
 function Pedestal({ z, x = 0, children }) {

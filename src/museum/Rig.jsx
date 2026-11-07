@@ -221,10 +221,16 @@ export default function Rig({ controllerRef, started, reduced, onRoomChange, onA
       st.room = room
       props.current.onRoomChange?.(room)
     }
+    // Minimapa: sólo se toca el DOM si la pose cambió (antes: setAttribute en cada fotograma,
+    // lo que forzaba recálculo de estilo del HUD 60 veces por segundo aunque no te movieras)
     if (minimapRef?.current) {
       const mx = HALL.zStart - st.z
       const my = st.x + HALL.halfW
-      minimapRef.current.setAttribute('transform', `translate(${mx.toFixed(2)} ${my.toFixed(2)}) rotate(${((-yaw * 180) / Math.PI).toFixed(1)})`)
+      const t = `translate(${mx.toFixed(1)} ${my.toFixed(1)}) rotate(${Math.round((-yaw * 180) / Math.PI)})`
+      if (t !== st.lastMinimap) {
+        st.lastMinimap = t
+        minimapRef.current.setAttribute('transform', t)
+      }
     }
   })
 
