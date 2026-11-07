@@ -4,6 +4,7 @@ import * as THREE from 'three'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Link, useNavigate } from 'react-router-dom'
 import Scene from './Scene.jsx'
+import IntroCard from './IntroCard.jsx'
 import Rig from './Rig.jsx'
 import { stations, HALL, dividers, exhibits, sculptures, DOOR_HALF } from './layout.js'
 import { rooms, getProduct, formatPrice } from '../data/products.js'
@@ -70,7 +71,7 @@ function AdaptiveDpr({ min, max }) {
   return null
 }
 
-export default function MuseumExperience({ reduced, initialStation = 0, initialProduct = null }) {
+export default function MuseumExperience({ reduced, initialStation = 0, initialProduct = null, autoStart = false }) {
   const navigate = useNavigate()
   const controller = useRef(null)
   const minimapPlayer = useRef(null)
@@ -131,6 +132,13 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
     goTo(target >= 0 ? target : 0, { openPanel: Boolean(initialProduct) })
   }
 
+  // El visitante ya pulsó «Entrar» en la portada ligera: arrancar en cuanto la escena esté lista
+  const startRef = useRef(start)
+  startRef.current = start
+  useEffect(() => {
+    if (autoStart && loaded && !started) startRef.current()
+  }, [autoStart, loaded, started])
+
   const stationRef = useRef(station)
   stationRef.current = station
   useEffect(() => {
@@ -185,7 +193,7 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
   const roomLabel = room === -1 ? 'Pórtico · Vestíbulo' : rooms[room]?.name ?? 'Museo'
 
   return (
-    <div className={`museum ${started ? 'is-started' : ''}`}>
+    <div className={`museum museum--live ${started ? 'is-started' : ''}`}>
       <Canvas
         className="museum__canvas"
         dpr={quality.maxDpr}
@@ -232,40 +240,13 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.7, ease: [0.76, 0, 0.24, 1] } }}
           >
-            <motion.div
-              className="museum__intro-card"
-              initial={{ y: 30, opacity: 0 }}
-              animate={{ y: 0, opacity: 1, transition: { delay: 0.15, duration: 0.75, ease: [0.22, 1, 0.36, 1] } }}
-              exit={{ y: -30, opacity: 0, transition: { duration: 0.45 } }}
-            >
-              <p className="eyebrow">Tienda-Museo 3D · Racks de Bronce & Travertino</p>
-              <h1 className="h1">
-                Atelier & <em>Racks</em>
-              </h1>
-              <p className="museum__intro-text">
-                Recorre cinco salas en piedra travertino y granito griego con olivos mediterráneos y 30 prendas originales colgadas
-                en racks arquitectónicos de bronce.
-              </p>
-              <ul className="museum__keys" aria-label="Controles">
-                <li><kbd>Arrastrar</kbd> mirar alrededor</li>
-                <li><kbd>Clic / toque</kbd> en el piso para caminar hacia un rack</li>
-                <li><kbd>W A S D</kbd> o flechas para moverte con fluidez</li>
-                <li><kbd>N</kbd> / <kbd>P</kbd> siguiente / anterior prenda en el rack</li>
-              </ul>
-              <div className="museum__loader" aria-live="polite">
-                <div className="museum__loader-track">
-                  <motion.div className="museum__loader-fill" animate={{ scaleX: loaded ? 1 : Math.max(0.08, progress) }} />
-                </div>
-                <span>{loaded ? '30 racks de tienda y 5 salas listas' : `Preparando racks y prendas… ${Math.round(progress * 100)}%`}</span>
-              </div>
-              <div className="museum__intro-actions">
-                <button className="btn btn--primary" onClick={start} disabled={!loaded}>
-                  Entrar a la tienda 3D <ArrowIcon width={18} height={18} />
-                </button>
-                <Link to="/catalogo" className="btn btn--ghost">
-                  Ver racks en catálogo (30)
-                </Link>
-              </div>
+            {/* Misma tarjeta que la portada ligera (Museum.jsx): sin saltos al montar el 3D */}
+            <motion.div exit={{ y: -30, opacity: 0, transition: { duration: 0.45 } }}>
+              <IntroCard
+                status={loaded ? 'ready' : 'loading'}
+                progress={loaded ? 1 : Math.max(0.03, progress)}
+                onEnter={start}
+              />
             </motion.div>
           </motion.div>
         )}

@@ -8,7 +8,7 @@ import BoutiqueRack from '../components/BoutiqueRack.jsx'
 import Deferred from '../components/Deferred.jsx'
 import { OliveBranch } from '../components/Ornaments.jsx'
 import { ArrowIcon, CubeIcon } from '../components/Icons.jsx'
-import { useScrollAnimations, loadGsap, onFirstInteraction } from '../hooks/useScrollAnimations.js'
+import { useScrollAnimations, useGsapEffect, onFirstInteraction } from '../hooks/useScrollAnimations.js'
 import { useMotionPref } from '../context/MotionContext.jsx'
 
 const HERO_PIECES = ['bbc-icecream-varsity', 'offwhite-caravaggio-varsity', 'bape-m65-laurel', 'raf-riot-bomber'].map(getProduct)
@@ -144,75 +144,69 @@ function HeroColonnade({ reduced }) {
 const manifesto =
   'No seguimos tendencias efímeras; esculpimos prendas originales que perduran como la piedra. En VESTIGIO cada pieza nace desde cero en nuestro atelier dialogando con la arquitectura griega de travertino, el bronce cepillado y la vida botánica del Mediterráneo.'
 
+/**
+ * Corredor 3D del teaser: avanza por el pasillo de racks al hacer scroll.
+ * Vive dentro de la sección diferida, así que se configura cuando ésta se monta
+ * (antes, si el visitante hacía scroll primero, el efecto nunca se activaba).
+ */
+function CorridorScroll({ sectionRef }) {
+  useGsapEffect(sectionRef, ({ gsap, el }) => {
+    gsap.fromTo(
+      el.querySelector('.corridor__track'),
+      { z: -200 },
+      {
+        z: 1500,
+        ease: 'none',
+        scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 0.6 },
+      },
+    )
+  })
+  return null
+}
+
 export default function Home() {
   const scope = useRef(null)
+  const teaserRef = useRef(null)
   const { reduced } = useMotionPref()
   useScrollAnimations(scope)
 
-  // Efectos con scrub (GSAP): se descargan con la primera interacción, nunca durante la carga
-  useEffect(() => {
-    if (reduced) return
-    let ctx
-    let onMove
-    let cancelled = false
+  // Efectos con scrub (GSAP) del hero y el manifiesto: se configuran tras la primera interacción
+  useGsapEffect(scope, ({ gsap, el }) => {
+    gsap.to('.hero__content', {
+      yPercent: -30,
+      autoAlpha: 0,
+      ease: 'none',
+      scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
+    })
+    gsap.to('.hero__media', {
+      yPercent: 10,
+      ease: 'none',
+      scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
+    })
+    // Manifiesto: las palabras se «encienden» al hacer scroll
+    gsap.fromTo(
+      '.manifesto__word',
+      { color: '#A39C8E' },
+      {
+        color: '#161917',
+        stagger: 0.05,
+        ease: 'none',
+        scrollTrigger: { trigger: '.manifesto', start: 'top 75%', end: 'bottom 45%', scrub: true },
+      },
+    )
 
-    const off = onFirstInteraction(() => loadGsap().then(({ gsap }) => {
-      if (cancelled || !scope.current) return
-      ctx = gsap.context(() => {
-        gsap.to('.hero__content', {
-          yPercent: -30,
-          autoAlpha: 0,
-          ease: 'none',
-          scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
-        })
-        gsap.to('.hero__media', {
-          yPercent: 10,
-          ease: 'none',
-          scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
-        })
-
-        gsap.fromTo(
-          '.manifesto__word',
-          { color: '#A39C8E' },
-          {
-            color: '#161917',
-            stagger: 0.05,
-            ease: 'none',
-            scrollTrigger: { trigger: '.manifesto', start: 'top 75%', end: 'bottom 45%', scrub: true },
-          },
-        )
-
-        gsap.fromTo(
-          '.corridor__track',
-          { z: -200 },
-          {
-            z: 1500,
-            ease: 'none',
-            scrollTrigger: { trigger: '.teaser', start: 'top bottom', end: 'bottom top', scrub: 0.6 },
-          },
-        )
-      }, scope)
-
-      const media = scope.current.querySelector('.hero__media')
-      const fine = window.matchMedia('(pointer: fine)').matches
-      if (fine && media) {
-        const xTo = gsap.quickTo(media, 'x', { duration: 1.2, ease: 'power3.out' })
-        const yTo = gsap.quickTo(media, 'y', { duration: 1.2, ease: 'power3.out' })
-        onMove = (e) => {
-          xTo((e.clientX / window.innerWidth - 0.5) * -14)
-          yTo((e.clientY / window.innerHeight - 0.5) * -10)
-        }
-        window.addEventListener('pointermove', onMove)
-      }
-    }))
-
-    return () => {
-      cancelled = true
-      off()
-      if (onMove) window.removeEventListener('pointermove', onMove)
-      ctx?.revert()
+    // Parallax del hero con el cursor (sólo punteros finos)
+    const media = el.querySelector('.hero__media')
+    if (!media || !window.matchMedia('(pointer: fine)').matches) return
+    const xTo = gsap.quickTo(media, 'x', { duration: 1.2, ease: 'power3.out' })
+    const yTo = gsap.quickTo(media, 'y', { duration: 1.2, ease: 'power3.out' })
+    const onMove = (e) => {
+      xTo((e.clientX / window.innerWidth - 0.5) * -14)
+      yTo((e.clientY / window.innerHeight - 0.5) * -10)
     }
-  }, [reduced])
+    window.addEventListener('pointermove', onMove)
+    return () => window.removeEventListener('pointermove', onMove)
+  })
 
   const featured = [
     products[0],
@@ -380,7 +374,7 @@ export default function Home() {
 
       {/* ───────────── TEASER MUSEO, SALAS Y CTA ───────────── */}
       <Deferred minHeight={1600}>
-      <section className="teaser" aria-labelledby="teaser-title">
+      <section className="teaser" aria-labelledby="teaser-title" ref={teaserRef}>
         <div className="corridor" aria-hidden="true">
           <div className="corridor__track">
             {corridorFrames.map((p, i) => (
@@ -409,6 +403,8 @@ export default function Home() {
           </Link>
         </div>
       </section>
+
+      <CorridorScroll sectionRef={teaserRef} />
 
       {/* ───────────── SALAS ───────────── */}
       <section className="section container" aria-labelledby="rooms-title">

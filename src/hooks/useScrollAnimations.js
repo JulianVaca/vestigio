@@ -2,17 +2,69 @@ import { useEffect } from 'react'
 import { useMotionPref } from '../context/MotionContext.jsx'
 
 let gsapPromise = null
-/** GSAP + ScrollTrigger bajo demanda (sólo para efectos con scrub en la portada). */
+/** GSAP + ScrollTrigger bajo demanda (sólo para efectos con scrub). */
 export function loadGsap() {
   if (!gsapPromise) {
     gsapPromise = Promise.all([import('gsap'), import('gsap/ScrollTrigger')]).then(([g, st]) => {
       const gsap = g.gsap || g.default
       const ScrollTrigger = st.ScrollTrigger || st.default
       gsap.registerPlugin(ScrollTrigger)
+      // Las secciones diferidas y content-visibility cambian la altura de la página después
+      // de cargar: recalcular las posiciones de los triggers cuando cambie (con debounce).
+      if (typeof ResizeObserver !== 'undefined') {
+        let t
+        let lastH = document.body.scrollHeight
+        new ResizeObserver(() => {
+          const h = document.body.scrollHeight
+          if (Math.abs(h - lastH) < 4) return
+          lastH = h
+          clearTimeout(t)
+          t = setTimeout(() => ScrollTrigger.refresh(), 160)
+        }).observe(document.body)
+      }
       return { gsap, ScrollTrigger }
     })
   }
   return gsapPromise
+}
+
+let interactionPromise = null
+/** Promesa que se resuelve con la primera interacción (y queda resuelta para siempre). */
+export function whenInteracted() {
+  if (!interactionPromise) interactionPromise = new Promise((resolve) => onFirstInteraction(resolve))
+  return interactionPromise
+}
+
+/**
+ * Efecto GSAP con scrub atado a un elemento. Se configura cuando (1) el visitante ya interactuó
+ * —GSAP nunca compite con la carga— y (2) el elemento de `scopeRef` existe. Así los componentes
+ * que se montan tarde (secciones diferidas) también reciben su animación de scroll.
+ * `setup({ gsap, ScrollTrigger, el })` puede devolver una función de limpieza.
+ */
+export function useGsapEffect(scopeRef, setup, deps = [], shouldRun = null) {
+  const { reduced } = useMotionPref()
+  useEffect(() => {
+    if (reduced || !scopeRef.current) return
+    if (shouldRun && !shouldRun(scopeRef.current)) return // nada que animar: ni siquiera descargar GSAP
+    let ctx
+    let extra
+    let cancelled = false
+    whenInteracted()
+      .then(loadGsap)
+      .then(({ gsap, ScrollTrigger }) => {
+        if (cancelled || !scopeRef.current) return
+        ctx = gsap.context(() => {
+          extra = setup({ gsap, ScrollTrigger, el: scopeRef.current })
+        }, scopeRef)
+        ScrollTrigger.refresh()
+      })
+    return () => {
+      cancelled = true
+      if (typeof extra === 'function') extra()
+      ctx?.revert()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reduced, ...deps])
 }
 
 /**
@@ -94,4 +146,25 @@ export function useScrollAnimations(scopeRef, deps = []) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduced, ...deps])
+
+  // [data-parallax="0.25"] → se desplaza más lento que el scroll (profundidad), vía GSAP diferido
+  useGsapEffect(
+    scopeRef,
+    ({ gsap, el }) => {
+      el.querySelectorAll('[data-parallax]').forEach((node) => {
+        const speed = parseFloat(node.dataset.parallax) || 0.2
+        gsap.fromTo(
+          node,
+          { yPercent: -speed * 50 },
+          {
+            yPercent: speed * 50,
+            ease: 'none',
+            scrollTrigger: { trigger: node.parentElement, start: 'top bottom', end: 'bottom top', scrub: true },
+          },
+        )
+      })
+    },
+    deps,
+    (el) => Boolean(el.querySelector('[data-parallax]')),
+  )
 }

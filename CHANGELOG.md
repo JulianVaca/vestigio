@@ -1,5 +1,29 @@
 # Registro de Cambios (Changelog) — VESTIGIO
 
+## [2.4.0] — Museo sin bloqueo al cargar, animaciones de scroll restauradas (2026-11-07)
+
+Lighthouse escritorio (build de producción):
+
+| Página | Antes | Después |
+|---|---|---|
+| Museo 3D (`/museo`) | 62 · TBT 3.160 ms | **99** · TBT 20–50 ms |
+| Inicio | 80–98 (variable) | **99** · TBT 10–20 ms |
+| Catálogo | 89 | **99** |
+
+### Museo en dos fases (`src/pages/Museum.jsx`, `src/museum/IntroCard.jsx`)
+- Al abrir `/museo` se muestra al instante una portada ligera con una captura real del museo (`public/img/museo-preview*.webp`, 28 KB) y **sin Three.js**. Antes la página descargaba ~970 KB y construía toda la escena (texturas, PMREM, shaders) mientras se cargaba: dos tareas de 1,2 s y 1,5 s.
+- Al pulsar «Entrar» se carga el 3D y la experiencia **arranca sola** al terminar (ya no hace falta un segundo clic). La descarga empieza al pasar el cursor o enfocar el botón.
+- Los enlaces directos a una sala u obra (`?sala=`, `?obra=`) entran directamente.
+- La misma tarjeta (`IntroCard`) se usa en ambas fases: sin saltos visuales ni de layout.
+
+### Animaciones de scroll restauradas (`useGsapEffect`)
+- **Corredor 3D de la portada:** si el visitante hacía scroll antes de que se montara la sección diferida, el efecto se configuraba sin encontrar el elemento y nunca se activaba. Ahora cada efecto se configura cuando su elemento existe.
+- **Parallax de «Nosotros»** restaurado.
+- Un `ResizeObserver` recalcula ScrollTrigger cuando cambia la altura de la página (secciones diferidas y `content-visibility`).
+
+### Pintado más barato en el hero
+- Sin `mix-blend-mode`, sin `backdrop-filter` en la etiqueta y sombras con menos desenfoque. Lighthouse y PageSpeed pintan sin GPU (por software), y esos efectos bloqueaban el hilo principal ~350 ms esperando al rasterizado.
+
 ## [2.3.1] — Tirones del museo 3D en PC (2026-11-07)
 
 Medido con Edge sobre la GPU real (AMD Radeon integrada, Direct3D 11), 1600×900, con vsync.
