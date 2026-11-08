@@ -1,17 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AnimatePresence, m as motion } from 'framer-motion'
 import { products, rooms, getProduct, formatPrice } from '../data/products.js'
 import { sneakers, getMarket, formatPct } from '../data/market.js'
 import ProductCard from '../components/ProductCard.jsx'
 import BoutiqueRack from '../components/BoutiqueRack.jsx'
-import Deferred from '../components/Deferred.jsx'
 import { OliveBranch } from '../components/Ornaments.jsx'
 import { ArrowIcon, CubeIcon } from '../components/Icons.jsx'
-import { useScrollAnimations, useGsapEffect, onFirstInteraction } from '../hooks/useScrollAnimations.js'
+import { useScrollAnimations, onFirstInteraction } from '../hooks/useScrollAnimations.js'
 import { useMotionPref } from '../context/MotionContext.jsx'
 
-const HERO_PIECES = ['bbc-icecream-varsity', 'offwhite-caravaggio-varsity', 'bape-m65-laurel', 'raf-riot-bomber'].map(getProduct)
+const HERO_PIECES = ['bbc-icecream-varsity', 'offwhite-caravaggio-varsity', 'bape-m65-laurel', 'raf-riot-bomber'].map(
+  getProduct,
+)
 const SIDE_LEFT = getProduct('sneaker-bapesta-marble')
 const SIDE_RIGHT = getProduct('base-doric-hoodie')
 const HERO_MS = 5200
@@ -36,8 +36,6 @@ function SideArch({ product, side }) {
 /**
  * Columnata «tríptico»: arco central con la prenda destacada y dos arcos menores
  * sobre un estilóbato de travertino, separados por columnas con capitel dorado.
- * Rendimiento: al cargar sólo existe la imagen LCP; la rotación (y la descarga de
- * la siguiente pieza) empieza con la primera interacción o tras 4 s.
  */
 function HeroColonnade({ reduced }) {
   const [i, setI] = useState(0)
@@ -63,7 +61,6 @@ function HeroColonnade({ reduced }) {
   const n = HERO_PIECES.length
   const prev = (i - 1 + n) % n
   const next = (i + 1) % n
-  // Sólo se montan la pieza visible, la anterior (fundido) y la siguiente (precarga)
   const mounted = armed ? new Set([i, prev, next]) : new Set([0])
   const p = HERO_PIECES[i]
 
@@ -105,20 +102,11 @@ function HeroColonnade({ reduced }) {
       <div className="colonnade__stylobate" aria-hidden="true" />
 
       <Link to={`/producto/${p.id}`} className="atrium__tag colonnade__tag">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.span
-            key={p.id}
-            className="atrium__tag-inner"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.3 }}
-          >
-            <span className="atrium__tag-kicker">Arco central · {String(i + 1).padStart(2, '0')}</span>
-            <span className="atrium__tag-name">{p.name}</span>
-            <span className="atrium__tag-price">{formatPrice(p.price)}</span>
-          </motion.span>
-        </AnimatePresence>
+        <span className="atrium__tag-inner">
+          <span className="atrium__tag-kicker">Arco central · {String(i + 1).padStart(2, '0')}</span>
+          <span className="atrium__tag-name">{p.name}</span>
+          <span className="atrium__tag-price">{formatPrice(p.price)}</span>
+        </span>
         <ArrowIcon width={18} height={18} />
       </Link>
 
@@ -141,84 +129,22 @@ function HeroColonnade({ reduced }) {
   )
 }
 
-const manifesto =
-  'No seguimos tendencias efímeras; esculpimos prendas originales que perduran como la piedra. En VESTIGIO cada pieza nace desde cero en nuestro atelier dialogando con la arquitectura griega de travertino, el bronce cepillado y la vida botánica del Mediterráneo.'
-
-/**
- * Corredor 3D del teaser: avanza por el pasillo de racks al hacer scroll.
- * Vive dentro de la sección diferida, así que se configura cuando ésta se monta
- * (antes, si el visitante hacía scroll primero, el efecto nunca se activaba).
- */
-function CorridorScroll({ sectionRef }) {
-  useGsapEffect(sectionRef, ({ gsap, el }) => {
-    gsap.fromTo(
-      el.querySelector('.corridor__track'),
-      { z: -200 },
-      {
-        z: 1500,
-        ease: 'none',
-        scrollTrigger: { trigger: el, start: 'top bottom', end: 'bottom top', scrub: 0.6 },
-      },
-    )
-  })
-  return null
-}
+const featured = [
+  products[0],
+  products[6],
+  products[12],
+  products[18],
+  products[24],
+  products[26],
+  products[27],
+  products[28],
+]
+const corridorFrames = [products[0], products[6], products[12], products[18], products[24], products[27]]
 
 export default function Home() {
   const scope = useRef(null)
-  const teaserRef = useRef(null)
   const { reduced } = useMotionPref()
   useScrollAnimations(scope)
-
-  // Efectos con scrub (GSAP) del hero y el manifiesto: se configuran tras la primera interacción
-  useGsapEffect(scope, ({ gsap, el }) => {
-    gsap.to('.hero__content', {
-      yPercent: -30,
-      autoAlpha: 0,
-      ease: 'none',
-      scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
-    })
-    gsap.to('.hero__media', {
-      yPercent: 10,
-      ease: 'none',
-      scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true },
-    })
-    // Manifiesto: las palabras se «encienden» al hacer scroll
-    gsap.fromTo(
-      '.manifesto__word',
-      { color: '#A39C8E' },
-      {
-        color: '#161917',
-        stagger: 0.05,
-        ease: 'none',
-        scrollTrigger: { trigger: '.manifesto', start: 'top 75%', end: 'bottom 45%', scrub: true },
-      },
-    )
-
-    // Parallax del hero con el cursor (sólo punteros finos)
-    const media = el.querySelector('.hero__media')
-    if (!media || !window.matchMedia('(pointer: fine)').matches) return
-    const xTo = gsap.quickTo(media, 'x', { duration: 1.2, ease: 'power3.out' })
-    const yTo = gsap.quickTo(media, 'y', { duration: 1.2, ease: 'power3.out' })
-    const onMove = (e) => {
-      xTo((e.clientX / window.innerWidth - 0.5) * -14)
-      yTo((e.clientY / window.innerHeight - 0.5) * -10)
-    }
-    window.addEventListener('pointermove', onMove)
-    return () => window.removeEventListener('pointermove', onMove)
-  })
-
-  const featured = [
-    products[0],
-    products[6],
-    products[12],
-    products[18],
-    products[24],
-    products[26],
-    products[27],
-    products[28],
-  ]
-  const corridorFrames = [products[0], products[6], products[12], products[18], products[24], products[27]]
 
   return (
     <main id="main" ref={scope}>
@@ -288,31 +214,25 @@ export default function Home() {
       </div>
 
       {/* ───────────── MANIFIESTO ───────────── */}
-      <section className="manifesto container" aria-label="Manifiesto">
+      <section className="manifesto container" aria-label="Manifiesto" data-reveal>
         <p className="eyebrow">Manifiesto del Atelier</p>
         <p className="manifesto__text">
-          {manifesto.split(' ').map((w, i) => (
-            <span key={i} className="manifesto__word">
-              {w}{' '}
-            </span>
-          ))}
+          No seguimos tendencias efímeras; esculpimos prendas originales que perduran como la piedra. En VESTIGIO cada
+          pieza nace desde cero en nuestro atelier dialogando con la arquitectura griega de travertino, el bronce
+          cepillado y la vida botánica del Mediterráneo.
         </p>
       </section>
 
-      {/* Secciones bajo el pliegue: cada una se monta en su propia tarea ociosa (TBT) */}
       {/* ───────────── PERCHERO INTERACTIVO EN PORTADA ───────────── */}
-      <Deferred minHeight={760}>
-        <div className="container">
-          <BoutiqueRack
-            items={featured}
-            title="Perchero de Selección · 8 Piezas Clave"
-            subtitle="Desliza las perchas como en nuestra boutique física o entra al catálogo completo para recorrer los 5 racks."
-          />
-        </div>
-      </Deferred>
+      <div className="container">
+        <BoutiqueRack
+          items={featured}
+          title="Perchero de Selección · 8 Piezas Clave"
+          subtitle="Haz clic en una percha o usa las flechas para recorrer las prendas como en nuestra boutique física."
+        />
+      </div>
 
       {/* ───────────── DESTACADOS ───────────── */}
-      <Deferred minHeight={900}>
       <section className="section container" aria-labelledby="featured-title">
         <div className="section__head" data-reveal>
           <div>
@@ -331,10 +251,8 @@ export default function Home() {
           ))}
         </div>
       </section>
-      </Deferred>
 
       {/* ───────────── MERCADO DE SNEAKERS (teaser) ───────────── */}
-      <Deferred minHeight={700}>
       <section className="market-teaser" aria-labelledby="market-title">
         <div className="container">
           <div className="section__head" data-reveal>
@@ -355,7 +273,14 @@ export default function Home() {
                 <li key={s.id}>
                   <Link to={`/sneakers/${s.id}`} className="mtile mtile--dark">
                     <span className="mtile__media">
-                      <img src={s.img.replace('.webp', '-sm.webp')} alt="" width="420" height="560" loading="lazy" />
+                      <img
+                        src={s.img.replace('.webp', '-sm.webp')}
+                        alt=""
+                        width="420"
+                        height="560"
+                        loading="lazy"
+                        decoding="async"
+                      />
                     </span>
                     <span className="mtile__name">{s.name}</span>
                     <span className="mtile__label">Precio más bajo</span>
@@ -370,23 +295,27 @@ export default function Home() {
           </ul>
         </div>
       </section>
-      </Deferred>
 
       {/* ───────────── TEASER MUSEO, SALAS Y CTA ───────────── */}
-      <Deferred minHeight={1600}>
-      <section className="teaser" aria-labelledby="teaser-title" ref={teaserRef}>
+      <section className="teaser" aria-labelledby="teaser-title">
         <div className="corridor" aria-hidden="true">
-          <div className="corridor__track">
+          <div className="corridor__track" style={{ transform: 'translate3d(0, 0, 260px)' }}>
             {corridorFrames.map((p, i) => (
               <div
                 key={p.id}
                 className={`corridor__frame corridor__frame--${i % 2 ? 'right' : 'left'}`}
-                style={{ '--z': `${-i * 320}px` }}
+                style={{ '--z': `${-i * 260}px` }}
               >
-                <img src={p.img.replace('.webp', '-sm.webp')} alt="" loading="lazy" width="420" height="560" />
+                <img
+                  src={p.img.replace('.webp', '-sm.webp')}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  width="420"
+                  height="560"
+                />
               </div>
             ))}
-            <div className="corridor__floor" />
           </div>
         </div>
         <div className="teaser__content container" data-reveal>
@@ -403,8 +332,6 @@ export default function Home() {
           </Link>
         </div>
       </section>
-
-      <CorridorScroll sectionRef={teaserRef} />
 
       {/* ───────────── SALAS ───────────── */}
       <section className="section container" aria-labelledby="rooms-title">
@@ -427,7 +354,15 @@ export default function Home() {
                   <span className="rooms__text">{r.text}</span>
                   <span className="rooms__thumbs" aria-hidden="true">
                     {items.slice(0, 3).map((p) => (
-                      <img key={p.id} src={p.img.replace('.webp', '-sm.webp')} alt="" loading="lazy" width="420" height="560" />
+                      <img
+                        key={p.id}
+                        src={p.img.replace('.webp', '-sm.webp')}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        width="420"
+                        height="560"
+                      />
                     ))}
                   </span>
                   <ArrowIcon className="rooms__arrow" />
@@ -448,7 +383,6 @@ export default function Home() {
           Contactar al atelier <ArrowIcon width={18} height={18} />
         </Link>
       </section>
-      </Deferred>
     </main>
   )
 }

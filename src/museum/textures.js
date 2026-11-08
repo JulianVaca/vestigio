@@ -1,12 +1,11 @@
 import * as THREE from 'three'
 
 /**
- * Texturas procedurales generadas en Canvas 2D con caché en memoria (cero peticiones de red
- * y cero regeneración si el visitante sale y vuelve a entrar al museo):
- * - Rótulos de sala con acentos en hoja de olivo (#2D5A40) y bronce helénico (#9A7438)
- * - Etiquetas de rack en mármol travertino (#F3EFE6)
- * - Piso de losas de granito griego claro y mármol travertino pulido
- * - Muros de sillería de piedra caliza y travertino del Egeo
+ * Texturas procedurales generadas en Canvas 2D con caché en memoria y resoluciones óptimas para VRAM:
+ * - Rótulos de sala (512×256)
+ * - Etiquetas de rack (256×128, empaquetadas en un atlas 1024×1024)
+ * - Textos murales (1024×512)
+ * - Piso y muros en granito/travertino (256×256 repetible)
  */
 const DISPLAY = '"Fraunces Variable", Georgia, serif'
 const SANS = '"Inter Variable", system-ui, sans-serif'
@@ -20,7 +19,7 @@ function canvas(w, h) {
   return [c, c.getContext('2d')]
 }
 
-function toTexture(c, { srgb = true, mipmaps = false, anisotropy = 2 } = {}) {
+function toTexture(c, { srgb = true, mipmaps = false, anisotropy = 1 } = {}) {
   const t = new THREE.CanvasTexture(c)
   if (srgb) t.colorSpace = THREE.SRGBColorSpace
   t.generateMipmaps = mipmaps
@@ -30,57 +29,57 @@ function toTexture(c, { srgb = true, mipmaps = false, anisotropy = 2 } = {}) {
   return t
 }
 
-/** Rótulo de sala pintado sobre el pórtico divisor (sin mipmaps: plano frontal). */
+/** Rótulo de sala pintado sobre el pórtico divisor (512×256: 4× menos VRAM). */
 export function roomTitleTexture(number, title, subtitle) {
   const key = `room:${number}:${title}`
   if (textureCache.has(key)) return textureCache.get(key)
 
-  const [c, g] = canvas(1024, 512)
+  const [c, g] = canvas(512, 256)
   g.fillStyle = '#9A7438'
-  g.font = `700 40px ${SANS}`
-  g.fillText(number, 40, 88)
+  g.font = `700 20px ${SANS}`
+  g.fillText(number, 20, 44)
   g.fillStyle = '#2D5A40'
-  g.fillRect(40, 112, 96, 6)
+  g.fillRect(20, 56, 48, 3)
   g.fillStyle = '#181B19'
-  g.font = `italic 600 92px ${DISPLAY}`
-  g.fillText(title, 36, 246)
+  g.font = `italic 600 46px ${DISPLAY}`
+  g.fillText(title, 18, 123)
   g.fillStyle = '#4A524D'
-  g.font = `500 38px ${SANS}`
-  wrap(g, subtitle, 40, 332, 920, 50)
+  g.font = `500 19px ${SANS}`
+  wrap(g, subtitle, 20, 166, 460, 25)
 
-  const tex = toTexture(c, { mipmaps: false, anisotropy: 2 })
+  const tex = toTexture(c, { mipmaps: false })
   textureCache.set(key, tex)
   return tex
 }
 
-/** Etiqueta de perchero junto a cada rack en mármol travertino y verde olivo. */
+/** Etiqueta de perchero junto a cada rack (256×128: ligera y nítida). */
 export function plaqueTexture(product, price) {
-  const [c, g] = canvas(512, 256)
+  const [c, g] = canvas(256, 128)
   g.fillStyle = '#F7F4EC'
-  g.fillRect(0, 0, 512, 256)
+  g.fillRect(0, 0, 256, 128)
   g.strokeStyle = '#9A7438'
-  g.lineWidth = 6
-  g.strokeRect(3, 3, 506, 250)
+  g.lineWidth = 3
+  g.strokeRect(1.5, 1.5, 253, 125)
 
   g.fillStyle = '#181B19'
-  g.font = `600 32px ${DISPLAY}`
-  g.fillText(product.name.slice(0, 26), 26, 60)
+  g.font = `600 16px ${DISPLAY}`
+  g.fillText(product.name.slice(0, 26), 13, 30)
 
   g.fillStyle = '#4A524D'
-  g.font = `600 20px ${SANS}`
-  g.fillText(`${product.brand} · ${product.color}`, 26, 102)
+  g.font = `600 10px ${SANS}`
+  g.fillText(`${product.brand} · ${product.color}`, 13, 51)
 
   g.fillStyle = '#181B19'
-  g.font = `700 28px ${SANS}`
-  g.fillText(price, 26, 158)
+  g.font = `700 14px ${SANS}`
+  g.fillText(price, 13, 79)
 
   g.fillStyle = '#2D5A40'
-  g.font = `700 20px ${SANS}`
-  g.fillText('VER RACK & ELEGIR TALLA  →', 26, 218)
-  return toTexture(c, { mipmaps: false, anisotropy: 2 })
+  g.font = `700 10px ${SANS}`
+  g.fillText('VER RACK & ELEGIR TALLA  →', 13, 109)
+  return toTexture(c, { mipmaps: false })
 }
 
-/** Texto mural (pórtico de entrada y muro final) optimizado a 1024×512 (4× menos VRAM). */
+/** Texto mural (pórtico de entrada y muro final) optimizado a 1024×512. */
 export function wallTextTexture({ eyebrow, title, subtitle, w = 1024, h = 512, titleSize = 184 }) {
   const key = `wall:${eyebrow}:${title}`
   if (textureCache.has(key)) return textureCache.get(key)
@@ -102,7 +101,7 @@ export function wallTextTexture({ eyebrow, title, subtitle, w = 1024, h = 512, t
     g.fillText(subtitle, w / 2, h * 0.8)
   }
 
-  const tex = toTexture(c, { mipmaps: false, anisotropy: 2 })
+  const tex = toTexture(c, { mipmaps: false })
   textureCache.set(key, tex)
   return tex
 }
@@ -115,7 +114,6 @@ export function floorTexture() {
   g.fillStyle = '#DDD6C7'
   g.fillRect(0, 0, 256, 256)
 
-  // Moteado mineral característico del granito griego claro (256×256 = 4× más rápido de generar)
   const img = g.getImageData(0, 0, 256, 256)
   const d = img.data
   for (let i = 0; i < d.length; i += 4) {
@@ -127,7 +125,6 @@ export function floorTexture() {
   }
   g.putImageData(img, 0, 0)
 
-  // Vetas suaves de cuarzo y travertino
   for (let i = 0; i < 8; i++) {
     const x = ((i * 73) % 240) + 8
     const y = ((i * 137) % 240) + 8
@@ -139,7 +136,6 @@ export function floorTexture() {
     g.fillRect(0, 0, 256, 256)
   }
 
-  // Juntas arquitectónicas de sillería
   g.strokeStyle = 'rgba(120, 112, 98, 0.35)'
   g.lineWidth = 2
   g.strokeRect(0, 0, 256, 256)
@@ -147,7 +143,7 @@ export function floorTexture() {
   g.lineWidth = 1
   g.strokeRect(4, 4, 248, 248)
 
-  const t = toTexture(c, { mipmaps: true, anisotropy: 4 })
+  const t = toTexture(c, { mipmaps: true, anisotropy: 2 })
   t.wrapS = t.wrapT = THREE.RepeatWrapping
   textureCache.set('floor', t)
   return t
@@ -172,7 +168,6 @@ export function wallGraniteTexture() {
   }
   g.putImageData(img, 0, 0)
 
-  // Bloques horizontales de sillería helénica (isódomo)
   g.strokeStyle = 'rgba(140, 132, 116, 0.28)'
   g.lineWidth = 1.5
   for (let y = 0; y < 256; y += 64) {
@@ -189,7 +184,7 @@ export function wallGraniteTexture() {
     }
   }
 
-  const t = toTexture(c, { mipmaps: true, anisotropy: 4 })
+  const t = toTexture(c, { mipmaps: true, anisotropy: 2 })
   t.wrapS = t.wrapT = THREE.RepeatWrapping
   textureCache.set('wallGranite', t)
   return t

@@ -1,6 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { m as motion } from 'framer-motion'
 import { formatPrice } from '../data/products.js'
 import { sneakers, getMarket, formatPct } from '../data/market.js'
 import { VerifiedSeal, OliveBranch } from '../components/Ornaments.jsx'
@@ -15,10 +14,6 @@ const SORTS = {
   sales: { label: 'Más vendidos', fn: (a, b) => b.m.sales - a.m.sales },
 }
 
-/**
- * Mercado de Sneakers «Pedestal»: listado tipo mercado de reventa con precio más bajo
- * por talla, última venta, variación semanal y unidades vendidas.
- */
 export default function Sneakers() {
   const scope = useRef(null)
   const [silhouette, setSilhouette] = useState('Todos')
@@ -83,7 +78,7 @@ export default function Sneakers() {
                 aria-pressed={c === silhouette}
                 onClick={() => setSilhouette(c)}
               >
-                {c === silhouette && <motion.span layoutId="market-chip" className="chip__bg" />}
+                {c === silhouette && <span className="chip__bg" />}
                 <span className="chip__label">{c}</span>
               </button>
             ))}
@@ -118,36 +113,36 @@ export default function Sneakers() {
           {size && ` · precios para ${size}`}
         </p>
 
-        <ul key={`${silhouette}-${size}-${sort}`} className="market__grid grid--fade">
+        <ul className="market__grid">
           {list.map(({ p, m, price }, i) => (
-              <li key={p.id} style={{ '--i': i }}>
-                <Link to={`/sneakers/${p.id}`} className="mtile">
-                  <span className="mtile__media">
-                    <img
-                      src={p.img}
-                      srcSet={`${p.img.replace('.webp', '-sm.webp')} 420w, ${p.img} 840w`}
-                      sizes="(max-width: 640px) 50vw, 30vw"
-                      alt={p.name}
-                      width="840"
-                      height="1120"
-                      loading={i < 3 ? 'eager' : 'lazy'}
-                      decoding="async"
-                    />
-                    <span className="mtile__badge">
-                      <VerifiedSeal className="mtile__seal" /> Verificado
-                    </span>
+            <li key={p.id}>
+              <Link to={`/sneakers/${p.id}`} className="mtile">
+                <span className="mtile__media">
+                  <img
+                    src={p.img}
+                    srcSet={`${p.img.replace('.webp', '-sm.webp')} 420w, ${p.img} 840w`}
+                    sizes="(max-width: 640px) 50vw, 30vw"
+                    alt={p.name}
+                    width="840"
+                    height="1120"
+                    loading={i < 3 ? 'eager' : 'lazy'}
+                    decoding="async"
+                  />
+                  <span className="mtile__badge">
+                    <VerifiedSeal className="mtile__seal" /> Verificado
                   </span>
-                  <span className="mtile__name">{p.name}</span>
-                  <span className="mtile__label">{size ? `Precio más bajo · ${size}` : 'Precio más bajo'}</span>
-                  <span className="mtile__price">{price ? formatPrice(price) : 'Sin ofertas'}</span>
-                  <span className="mtile__row">
-                    <span className={`mtile__change ${m.change >= 0 ? 'is-up' : 'is-down'}`}>
-                      {m.change >= 0 ? '▲' : '▼'} {formatPct(m.change)}
-                    </span>
-                    <span className="mtile__sold">{m.sales} vendidos</span>
+                </span>
+                <span className="mtile__name">{p.name}</span>
+                <span className="mtile__label">{size ? `Precio más bajo · ${size}` : 'Precio más bajo'}</span>
+                <span className="mtile__price">{price ? formatPrice(price) : 'Sin ofertas'}</span>
+                <span className="mtile__row">
+                  <span className={`mtile__change ${m.change >= 0 ? 'is-up' : 'is-down'}`}>
+                    {m.change >= 0 ? '▲' : '▼'} {formatPct(m.change)}
                   </span>
-                </Link>
-              </li>
+                  <span className="mtile__sold">{m.sales} vendidos</span>
+                </span>
+              </Link>
+            </li>
           ))}
         </ul>
       </div>

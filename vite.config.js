@@ -24,9 +24,6 @@ export default defineConfig({
           if (id.includes('node_modules/framer-motion') || id.includes('node_modules/motion-')) {
             return 'vendor-motion'
           }
-          if (id.includes('node_modules/gsap')) {
-            return 'vendor-gsap'
-          }
         },
       },
     },

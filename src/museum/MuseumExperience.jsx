@@ -21,17 +21,16 @@ const AUTOPLAY_MS = 6500
  * y el antialiasing sólo se activa cuando el lienzo resultante es moderado.
  */
 function detectQuality() {
-  if (typeof window === 'undefined') return { lowPower: false, maxDpr: 1, minDpr: 0.75, antialias: true }
+  if (typeof window === 'undefined') return { lowPower: false, maxDpr: 1, minDpr: 0.7, antialias: false }
   const coarse = window.matchMedia('(pointer: coarse)').matches
   const cores = navigator.hardwareConcurrency || 8
   const lowPower = coarse || cores <= 4
-  const deviceDpr = window.devicePixelRatio || 1
   const px = window.innerWidth * window.innerHeight
-  const budget = lowPower ? 1.35e6 : 2.3e6 // píxeles renderizados por fotograma
+  const budget = lowPower ? 1.0e6 : 1.6e6 // presupuesto estricto de píxeles por fotograma
   const byBudget = Math.sqrt(budget / px)
-  const maxDpr = Math.max(Math.min(1, deviceDpr), Math.min(deviceDpr, lowPower ? 1.2 : 1.4, byBudget))
-  const antialias = !lowPower && px * maxDpr * maxDpr <= 2.3e6
-  return { lowPower, maxDpr, minDpr: Math.min(maxDpr, 0.7), antialias }
+  const maxDpr = Math.max(0.65, Math.min(lowPower ? 0.8 : 1.0, byBudget))
+  const antialias = !lowPower && px * maxDpr * maxDpr <= 1.4e6
+  return { lowPower, maxDpr: +maxDpr.toFixed(2), minDpr: Math.min(+maxDpr.toFixed(2), 0.65), antialias }
 }
 
 /**
@@ -308,17 +307,7 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
           {/* ───────── Sala actual + Selector rápido de salas ───────── */}
           <div className="museum__hud-top">
             <div className="museum__room" aria-live="polite">
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={room}
-                  initial={{ y: 14, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -14, opacity: 0 }}
-                  transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  {roomLabel}
-                </motion.p>
-              </AnimatePresence>
+              <p>{roomLabel}</p>
             </div>
 
             <div className="museum__room-pills" role="navigation" aria-label="Salto rápido por salas">
@@ -353,18 +342,9 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
               <span className="tour__count">
                 {current ? String(station + 1).padStart(2, '0') : '··'} / {String(stations.length).padStart(2, '0')}
               </span>
-              <AnimatePresence mode="wait">
-                <motion.span
-                  key={current?.id ?? 'free'}
-                  className="tour__name"
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -8 }}
-                  transition={{ duration: 0.25 }}
-                >
-                  {current ? current.label : 'Recorrido libre'}
-                </motion.span>
-              </AnimatePresence>
+              <span className="tour__name">
+                {current ? current.label : 'Recorrido libre'}
+              </span>
             </div>
             <button className="icon-btn" onClick={() => goTo((station ?? -1) + 1)} aria-label="Obra siguiente">
               <ArrowIcon />

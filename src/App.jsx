@@ -1,6 +1,5 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
-import { AnimatePresence } from 'framer-motion'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
 import Toast from './components/Toast.jsx'
@@ -8,7 +7,6 @@ import PageTransition from './components/PageTransition.jsx'
 import Home from './pages/Home.jsx'
 
 // Code splitting: cada página se descarga sólo cuando se visita.
-// El museo 3D (Three.js) es el bloque más pesado y nunca bloquea el inicio.
 const Catalog = lazy(() => import('./pages/Catalog.jsx'))
 const Product = lazy(() => import('./pages/Product.jsx'))
 const Cart = lazy(() => import('./pages/Cart.jsx'))
@@ -24,33 +22,34 @@ export default function App() {
   const location = useLocation()
   const isMuseum = location.pathname.startsWith('/museo')
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [location.pathname])
+
   return (
     <>
       <a className="skip-link" href="#main">
         Saltar al contenido
       </a>
       <Header overlay={isMuseum} />
-      {/* initial={false}: la primera carga no espera al telón (mejor LCP) */}
-      <AnimatePresence mode="wait" initial={false} onExitComplete={() => window.scrollTo(0, 0)}>
-        <PageTransition key={location.pathname}>
-          <Suspense fallback={<div className="page-loading" aria-busy="true" />}>
-            <Routes location={location}>
-              <Route path="/" element={<Home />} />
-              <Route path="/catalogo" element={<Catalog />} />
-              <Route path="/producto/:id" element={<Product />} />
-              <Route path="/carrito" element={<Cart />} />
-              <Route path="/nosotros" element={<About />} />
-              <Route path="/contacto" element={<Contact />} />
-              <Route path="/museo" element={<Museum />} />
-              <Route path="/marca" element={<Brand />} />
-              <Route path="/sneakers" element={<Sneakers />} />
-              <Route path="/sneakers/:id" element={<SneakerDetail />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-          {!isMuseum && <Footer />}
-        </PageTransition>
-      </AnimatePresence>
+      <PageTransition key={location.pathname}>
+        <Suspense fallback={<div className="page-loading" aria-busy="true" />}>
+          <Routes location={location}>
+            <Route path="/" element={<Home />} />
+            <Route path="/catalogo" element={<Catalog />} />
+            <Route path="/producto/:id" element={<Product />} />
+            <Route path="/carrito" element={<Cart />} />
+            <Route path="/nosotros" element={<About />} />
+            <Route path="/contacto" element={<Contact />} />
+            <Route path="/museo" element={<Museum />} />
+            <Route path="/marca" element={<Brand />} />
+            <Route path="/sneakers" element={<Sneakers />} />
+            <Route path="/sneakers/:id" element={<SneakerDetail />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+        {!isMuseum && <Footer />}
+      </PageTransition>
       <Toast />
     </>
   )

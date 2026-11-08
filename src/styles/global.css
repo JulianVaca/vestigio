@@ -381,12 +381,10 @@ fieldset {
   inset: 0 0 auto;
   z-index: 100;
   height: var(--header-h);
-  transition: transform 0.5s var(--ease-curtain), background-color 0.4s, backdrop-filter 0.4s;
+  transition: transform 0.35s var(--ease-out), background-color 0.3s;
 }
 .header--solid {
-  background: rgba(245, 241, 232, 0.9);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(245, 241, 232, 0.97);
   border-bottom: 1px solid rgba(184, 150, 79, 0.35);
 }
 /* Sobre el hero oscuro (sin scroll) el header es claro sobre ciprés */
@@ -407,9 +405,7 @@ fieldset {
   background: rgba(243, 236, 220, 0.1);
 }
 .header--overlay {
-  background: rgba(243, 239, 230, 0.82);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: rgba(245, 241, 232, 0.97);
   border-bottom: 1px solid rgba(200, 192, 174, 0.5);
 }
 .header--hidden {
@@ -623,10 +619,9 @@ html[data-reduced-motion='true'] .manifesto__word {
   text-transform: uppercase;
   padding: 0.28rem 0.65rem;
   border-radius: 999px;
-  background: rgba(243, 239, 230, 0.92);
+  background: rgba(243, 239, 230, 0.96);
   color: var(--c-text);
   border: 1px solid var(--c-line);
-  backdrop-filter: blur(6px);
 }
 .card__brand-pill {
   position: absolute;

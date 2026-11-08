@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from 'react'
-import { m as motion } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
 import { products, categories, rooms } from '../data/products.js'
 import ProductCard from '../components/ProductCard.jsx'
@@ -34,7 +33,7 @@ export default function Catalog() {
         </h1>
         <p className="page__lead">
           Explora nuestras 30 prendas creadas desde cero como si recorrieras los percheros de nuestra tienda física:
-          desliza las perchas de bronce, inspecciona cada caída textil y descuelga tu talla directamente al carrito.
+          selecciona las perchas de bronce, inspecciona cada caída textil y descuelga tu talla directamente al carrito.
         </p>
       </header>
 
@@ -47,13 +46,7 @@ export default function Catalog() {
               aria-pressed={c === cat}
               onClick={() => setParams(c === 'Todo' ? {} : { cat: c }, { replace: true })}
             >
-              {c === cat && (
-                <motion.span
-                  layoutId="chip-bg"
-                  className="chip__bg"
-                  transition={{ type: 'spring', stiffness: 500, damping: 38 }}
-                />
-              )}
+              {c === cat && <span className="chip__bg" />}
               <span className="chip__label">{c}</span>
             </button>
           ))}
@@ -105,14 +98,7 @@ export default function Catalog() {
           {rooms.map((r) => {
             const roomItems = products.filter((p) => p.room === r.id && (cat === 'Todo' || p.category === cat))
             if (!roomItems.length) return null
-            return (
-              <BoutiqueRack
-                key={r.id}
-                items={roomItems}
-                title={r.name}
-                subtitle={r.text}
-              />
-            )
+            return <BoutiqueRack key={r.id} items={roomItems} title={r.name} subtitle={r.text} />
           })}
         </div>
       )}
@@ -123,13 +109,9 @@ export default function Catalog() {
             Mostrando {list.length} {list.length === 1 ? 'prenda original' : 'prendas originales'} en vitrina
           </p>
 
-          {/* Sin animaciones de layout de framer-motion: medían las 30 tarjetas en cada cambio
-              (layouts forzados). Fundido CSS escalonado al cambiar filtro u orden. */}
-          <div key={`${cat}-${sort}`} className="grid grid--4 grid--fade">
+          <div className="grid grid--4">
             {list.map((p, i) => (
-              <div key={p.id} style={{ '--i': Math.min(i, 12) }}>
-                <ProductCard product={p} priority={i < 4} />
-              </div>
+              <ProductCard key={p.id} product={p} priority={i < 4} />
             ))}
           </div>
         </>

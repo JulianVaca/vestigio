@@ -1,76 +1,8 @@
 import { useEffect } from 'react'
 import { useMotionPref } from '../context/MotionContext.jsx'
 
-let gsapPromise = null
-/** GSAP + ScrollTrigger bajo demanda (sólo para efectos con scrub). */
-export function loadGsap() {
-  if (!gsapPromise) {
-    gsapPromise = Promise.all([import('gsap'), import('gsap/ScrollTrigger')]).then(([g, st]) => {
-      const gsap = g.gsap || g.default
-      const ScrollTrigger = st.ScrollTrigger || st.default
-      gsap.registerPlugin(ScrollTrigger)
-      // Las secciones diferidas y content-visibility cambian la altura de la página después
-      // de cargar: recalcular las posiciones de los triggers cuando cambie (con debounce).
-      if (typeof ResizeObserver !== 'undefined') {
-        let t
-        let lastH = document.body.scrollHeight
-        new ResizeObserver(() => {
-          const h = document.body.scrollHeight
-          if (Math.abs(h - lastH) < 4) return
-          lastH = h
-          clearTimeout(t)
-          t = setTimeout(() => ScrollTrigger.refresh(), 160)
-        }).observe(document.body)
-      }
-      return { gsap, ScrollTrigger }
-    })
-  }
-  return gsapPromise
-}
-
-let interactionPromise = null
-/** Promesa que se resuelve con la primera interacción (y queda resuelta para siempre). */
-export function whenInteracted() {
-  if (!interactionPromise) interactionPromise = new Promise((resolve) => onFirstInteraction(resolve))
-  return interactionPromise
-}
-
-/**
- * Efecto GSAP con scrub atado a un elemento. Se configura cuando (1) el visitante ya interactuó
- * —GSAP nunca compite con la carga— y (2) el elemento de `scopeRef` existe. Así los componentes
- * que se montan tarde (secciones diferidas) también reciben su animación de scroll.
- * `setup({ gsap, ScrollTrigger, el })` puede devolver una función de limpieza.
- */
-export function useGsapEffect(scopeRef, setup, deps = [], shouldRun = null) {
-  const { reduced } = useMotionPref()
-  useEffect(() => {
-    if (reduced || !scopeRef.current) return
-    if (shouldRun && !shouldRun(scopeRef.current)) return // nada que animar: ni siquiera descargar GSAP
-    let ctx
-    let extra
-    let cancelled = false
-    whenInteracted()
-      .then(loadGsap)
-      .then(({ gsap, ScrollTrigger }) => {
-        if (cancelled || !scopeRef.current) return
-        ctx = gsap.context(() => {
-          extra = setup({ gsap, ScrollTrigger, el: scopeRef.current })
-        }, scopeRef)
-        ScrollTrigger.refresh()
-      })
-    return () => {
-      cancelled = true
-      if (typeof extra === 'function') extra()
-      ctx?.revert()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reduced, ...deps])
-}
-
 /**
  * Ejecuta `fn` en la primera interacción real del visitante (scroll, puntero, toque o tecla).
- * Mantiene el hilo principal libre durante la carga: los efectos decorativos no compiten
- * con el primer render (mejora TBT / INP). Devuelve una función de limpieza.
  */
 export function onFirstInteraction(fn) {
   const events = ['scroll', 'pointermove', 'pointerdown', 'touchstart', 'keydown', 'wheel']
@@ -90,12 +22,8 @@ export function onFirstInteraction(fn) {
 }
 
 /**
- * Animaciones de aparición al hacer scroll con IntersectionObserver + transiciones CSS
- * (sin GSAP: cero trabajo de layout por fotograma y nada que descargar).
- * Dentro de `scopeRef`:
- *  - [data-reveal]          → aparece desde abajo al entrar en viewport
- *  - [data-reveal-stagger]  → sus hijos aparecen en cascada
- * Con movimiento reducido no se registra nada: el contenido queda visible.
+ * Animaciones de aparición al hacer scroll con IntersectionObserver + transiciones CSS en GPU
+ * (cero listeners de scroll en el hilo principal, cero reflujos y cero librerías pesadas).
  */
 export function useScrollAnimations(scopeRef, deps = []) {
   const { reduced } = useMotionPref()
@@ -108,14 +36,12 @@ export function useScrollAnimations(scopeRef, deps = []) {
     root.querySelectorAll('[data-reveal]').forEach((el) => targets.push(el))
     root.querySelectorAll('[data-reveal-stagger]').forEach((group) => {
       Array.from(group.children).forEach((child, i) => {
-        child.style.setProperty('--reveal-delay', `${Math.min(i, 8) * 70}ms`)
+        child.style.setProperty('--reveal-delay', `${Math.min(i, 6) * 50}ms`)
         targets.push(child)
       })
     })
+    if (!targets.length) return
 
-    // Sin getBoundingClientRect (forzaría un layout síncrono en plena carga): la primera
-    // notificación del observer indica qué está ya en pantalla. Eso queda visible tal cual;
-    // sólo lo que está fuera se oculta y se revela al entrar.
     const seen = new WeakSet()
     const io = new IntersectionObserver(
       (entries) => {
@@ -136,7 +62,7 @@ export function useScrollAnimations(scopeRef, deps = []) {
           }
         })
       },
-      { rootMargin: '0px 0px -8% 0px' },
+      { rootMargin: '0px 0px -5% 0px' },
     )
     targets.forEach((el) => io.observe(el))
 
@@ -146,25 +72,4 @@ export function useScrollAnimations(scopeRef, deps = []) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduced, ...deps])
-
-  // [data-parallax="0.25"] → se desplaza más lento que el scroll (profundidad), vía GSAP diferido
-  useGsapEffect(
-    scopeRef,
-    ({ gsap, el }) => {
-      el.querySelectorAll('[data-parallax]').forEach((node) => {
-        const speed = parseFloat(node.dataset.parallax) || 0.2
-        gsap.fromTo(
-          node,
-          { yPercent: -speed * 50 },
-          {
-            yPercent: speed * 50,
-            ease: 'none',
-            scrollTrigger: { trigger: node.parentElement, start: 'top bottom', end: 'bottom top', scrub: true },
-          },
-        )
-      })
-    },
-    deps,
-    (el) => Boolean(el.querySelector('[data-parallax]')),
-  )
 }
