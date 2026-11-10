@@ -1,5 +1,7 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
+import EntranceDoor, { shouldShowDoor } from './components/EntranceDoor.jsx'
+import { useMotionPref } from './context/MotionContext.jsx'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
 import Toast from './components/Toast.jsx'
@@ -21,6 +23,10 @@ const NotFound = lazy(() => import('./pages/NotFound.jsx'))
 export default function App() {
   const location = useLocation()
   const isMuseum = location.pathname.startsWith('/museo')
+  const { reduced } = useMotionPref()
+  // La puerta sólo recibe a quien llega por la portada, una vez por visita.
+  const [door, setDoor] = useState(() => shouldShowDoor(location.pathname, reduced))
+  const closeDoor = useCallback(() => setDoor(false), [])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
@@ -51,6 +57,7 @@ export default function App() {
         {!isMuseum && <Footer />}
       </PageTransition>
       <Toast />
+      {door && !reduced && <EntranceDoor onDone={closeDoor} />}
     </>
   )
 }

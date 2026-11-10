@@ -9,6 +9,7 @@
 | **Zoom Marquilla** | `cubic-bezier(0.22, 1, 0.36, 1)` | 0.65 – 1.05 s | Zoom-out desde la marquilla tejida del cuello/lengüeta para elegir la talla |
 | **Telón Helénico** | `cubic-bezier(0.76, 0, 0.24, 1)` | 0.45 – 0.55 s | Transiciones de página y menús |
 | **Carrera Carrito** | `cubic-bezier(0.22, 0.88, 0.38, 1)` | 0.78 s | Carrito corriendo dinámicamente frente a la pantalla al hacer clic en el carrito |
+| **Puerta Boutique** | `cubic-bezier(0.66, 0, 0.18, 1)` | 1.5 s (1.75 s con el avance) | Hojas de la puerta de entrada girando hacia dentro al llegar a la portada; una vez por visita, no aparece con movimiento reducido |
 | **Sello Archivo** | `spring(600, 14)` | ~0.54 s | Vuelo en cápsula 3D con estela botánica y caballito ("wheelie") del carrito |
 
 ## 2. Botón de Movimiento (Onda / Línea Horizontal al lado del Carrito)
