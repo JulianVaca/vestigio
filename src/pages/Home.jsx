@@ -139,6 +139,8 @@ const featured = [
   products[27],
   products[28],
 ]
+// En el perchero de portada cuelgan ocho prendas, dos por sala de ropa.
+const rackPieces = [0, 3, 6, 9, 12, 15, 18, 21].map((i) => products[i])
 const corridorFrames = [products[0], products[6], products[12], products[18], products[24], products[27]]
 
 export default function Home() {
@@ -226,9 +228,9 @@ export default function Home() {
       {/* ───────────── PERCHERO INTERACTIVO EN PORTADA ───────────── */}
       <div className="container">
         <BoutiqueRack
-          items={featured}
+          items={rackPieces}
           title="Perchero de Selección · 8 Piezas Clave"
-          subtitle="Haz clic en una percha o usa las flechas para recorrer las prendas como en nuestra boutique física."
+          subtitle="Arrastra el riel, pasa el cursor para abrir las prendas y haz clic en una para descolgarla."
         />
       </div>
 

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { formatPrice, rooms } from '../data/products.js'
@@ -7,6 +7,23 @@ import { useMotionPref } from '../context/MotionContext.jsx'
 import { flyToCart } from '../lib/flyToCart.js'
 import SizeSelector from './SizeSelector.jsx'
 import { ArrowIcon, ArrowLeftIcon, CheckIcon, CubeIcon, PlusIcon } from './Icons.jsx'
+import '../styles/rack3d.css'
+
+// Three.js sólo se descarga cuando un perchero se acerca a la pantalla.
+const Rack3D = lazy(() => import('../rack3d/Rack3D.jsx'))
+
+let webglOk = null
+function hasWebGL() {
+  if (webglOk === null) {
+    try {
+      const c = document.createElement('canvas')
+      webglOk = Boolean(c.getContext('webgl2') || c.getContext('webgl'))
+    } catch {
+      webglOk = false
+    }
+  }
+  return webglOk
+}
 
 /** Percha de bronce dorado: trazos directos (sin url(#id) cross-tree) para composición GPU instantánea en 3D. */
 const Hanger = memo(function Hanger() {
@@ -44,6 +61,26 @@ const BoutiqueRack = memo(function BoutiqueRack({ items, title, subtitle }) {
   const drag = useRef({ down: false, x: 0, left: 0, moved: 0 })
   const { add } = useCart()
   const { reduced } = useMotionPref()
+  const stageRef = useRef(null)
+  const [near, setNear] = useState(false)
+  const [ready3d, setReady3d] = useState(false)
+
+  // El perchero 3D cuelga prendas; el calzado tiene sus propias repisas y aquí usa el riel clásico.
+  const can3d = !reduced && Boolean(items?.length) && !items.some((p) => p.room === 4) && hasWebGL()
+  const show3d = can3d && near
+
+  // Monta la escena sólo cerca de la pantalla y la libera al alejarse (GPU y memoria en reposo).
+  useEffect(() => {
+    const el = stageRef.current
+    if (!can3d || !el || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(([entry]) => setNear(entry.isIntersecting), { rootMargin: '350px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [can3d])
+
+  useEffect(() => {
+    if (!show3d) setReady3d(false)
+  }, [show3d])
 
   useEffect(() => {
     setActive(0)
@@ -144,7 +181,18 @@ const BoutiqueRack = memo(function BoutiqueRack({ items, title, subtitle }) {
         </div>
       </header>
 
-      <div className="vrack__stage">
+      <div ref={stageRef} className={`vrack__stage ${show3d && ready3d ? 'is-3d' : ''}`}>
+        {show3d && (
+          <Suspense fallback={null}>
+            <Rack3D
+              key={items.map((p) => p.id).join('|')}
+              items={items}
+              active={safe}
+              onSelect={(i) => select(i)}
+              onReady={() => setReady3d(true)}
+            />
+          </Suspense>
+        )}
         <div className="vrack__rod" aria-hidden="true">
           <span className="vrack__finial vrack__finial--l" />
           <span className="vrack__finial vrack__finial--r" />

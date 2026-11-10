@@ -6,3 +6,6 @@ dist
 
 assets-src
 publicar-en-github.bat
+
+# graphify (grafo local, no se versiona)
+graphify-out/
