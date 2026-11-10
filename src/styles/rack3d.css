@@ -1,0 +1,69 @@
+/* ==========================================================================
+   Perchero 3D (WebGL) dentro del escenario de BoutiqueRack
+   El riel clásico sigue en el DOM para teclado y lectores de pantalla; sólo deja de verse.
+   ========================================================================== */
+.rack3d {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+.vrack__stage.is-3d .rack3d {
+  opacity: 1;
+}
+.rack3d.is-hover {
+  cursor: pointer;
+}
+.rack3d.is-dragging {
+  cursor: grabbing;
+}
+.rack3d canvas {
+  display: block;
+}
+
+.vrack__stage.is-3d .vrack__rod,
+.vrack__stage.is-3d .vrack__rail {
+  opacity: 0;
+  pointer-events: none;
+}
+/* El foco de teclado vive en el riel oculto: el escenario lo hace visible. */
+.vrack__stage.is-3d:has(.vrack__garment:focus-visible) {
+  outline: 2px solid var(--c-gold-500);
+  outline-offset: -6px;
+  border-radius: 14px;
+}
+
+.rack3d__label {
+  position: absolute;
+  left: 0;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  max-width: min(22rem, 80vw);
+  text-align: center;
+  pointer-events: none;
+  will-change: transform;
+}
+.rack3d__label-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--f-display);
+  font-size: 0.98rem;
+  line-height: 1.2;
+  color: var(--c-text);
+}
+.rack3d__label-price {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-gold);
+}

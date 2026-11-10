@@ -24,6 +24,9 @@ export default function Catalog() {
     [cat, sort],
   )
 
+  // En el perchero central cuelgan las prendas; el calzado se queda en su propia línea y en la galería.
+  const rackList = useMemo(() => (cat === 'Todo' ? list.filter((p) => p.room !== 4) : list), [cat, list])
+
   return (
     <main id="main" ref={scope} className="page container">
       <header className="page__head" data-reveal>
@@ -86,8 +89,8 @@ export default function Catalog() {
       {/* Vista de Rack Principal + Cuadrícula */}
       {viewMode === 'both' && (
         <BoutiqueRack
-          items={list}
-          title={cat === 'Todo' ? 'Perchero Central · 30 Piezas de Autor' : `Perchero · ${cat}`}
+          items={rackList}
+          title={cat === 'Todo' ? `Perchero Central · ${rackList.length} Prendas de Autor` : `Perchero · ${cat}`}
           subtitle="Haz clic en cualquier percha lateral, usa las flechas o arrastra horizontalmente para recorrer las prendas colgadas."
         />
       )}
