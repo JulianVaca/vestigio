@@ -104,8 +104,17 @@ export function getMarket(product) {
 export const formatPct = (v, digits = 1) =>
   `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v * 100).toLocaleString('es-CO', { maximumFractionDigits: digits, minimumFractionDigits: digits })}%`
 
-export const formatDate = (t, opts = { day: 'numeric', month: 'short' }) =>
-  new Intl.DateTimeFormat('es-CO', opts).format(new Date(t))
+// Las gráficas y las transacciones reutilizan sus formatos de fecha.
+const dateFormatters = new Map()
+export const formatDate = (t, opts = { day: 'numeric', month: 'short' }) => {
+  const key = JSON.stringify(opts)
+  let formatter = dateFormatters.get(key)
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat('es-CO', opts)
+    dateFormatters.set(key, formatter)
+  }
+  return formatter.format(new Date(t))
+}
 
 /* Ofertas del visitante (persistidas localmente) */
 const OFFERS_KEY = 'vestigio-offers'

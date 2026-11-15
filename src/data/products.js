@@ -684,7 +684,15 @@ export const rooms = [
 
 export const categories = ['Todo', ...new Set(products.map((p) => p.category))]
 
-export const getProduct = (id) => products.find((p) => p.id === id)
+// Índice de consulta constante: evita recorrer el catálogo en cada interacción del museo y del carrito.
+const productById = new Map(products.map((product) => [product.id, product]))
+export const getProduct = (id) => productById.get(id)
 
-export const formatPrice = (n) =>
-  new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n)
+// Crear Intl.NumberFormat es mucho más costoso que utilizar un formateador existente.
+// Se conserva exactamente el mismo idioma, moneda y redondeo.
+const copFormatter = new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  maximumFractionDigits: 0,
+})
+export const formatPrice = (n) => copFormatter.format(n)

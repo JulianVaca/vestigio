@@ -5,6 +5,10 @@ import ProductCard from '../components/ProductCard.jsx'
 import BoutiqueRack from '../components/BoutiqueRack.jsx'
 import { useScrollAnimations } from '../hooks/useScrollAnimations.js'
 
+// Los grupos de sala no cambian durante la sesión: se calculan una vez y se reutilizan
+// para evitar crear arreglos nuevos al interactuar con filtros o con los racks.
+const roomProducts = rooms.map((room) => products.filter((p) => p.room === room.id))
+
 const sorts = {
   relevance: { label: 'Orden de sala (I – V)', fn: (a, b) => a.room - b.room },
   asc: { label: 'Precio: menor a mayor', fn: (a, b) => a.price - b.price },
@@ -26,6 +30,10 @@ export default function Catalog() {
 
   // En el perchero central cuelgan las prendas; el calzado se queda en su propia línea y en la galería.
   const rackList = useMemo(() => (cat === 'Todo' ? list.filter((p) => p.room !== 4) : list), [cat, list])
+  const roomLists = useMemo(
+    () => roomProducts.map((items) => (cat === 'Todo' ? items : items.filter((p) => p.category === cat))),
+    [cat],
+  )
 
   return (
     <main id="main" ref={scope} className="page container">
@@ -98,8 +106,8 @@ export default function Catalog() {
       {/* Vista de los 5 Racks de Tienda por Sala */}
       {viewMode === 'racks' && (
         <div className="racks-stack">
-          {rooms.map((r) => {
-            const roomItems = products.filter((p) => p.room === r.id && (cat === 'Todo' || p.category === cat))
+          {rooms.map((r, i) => {
+            const roomItems = roomLists[i]
             if (!roomItems.length) return null
             return <BoutiqueRack key={r.id} items={roomItems} title={r.name} subtitle={r.text} />
           })}

@@ -231,7 +231,7 @@ const BoutiqueRack = memo(function BoutiqueRack({ items, title, subtitle }) {
                         alt=""
                         width="420"
                         height="560"
-                        loading={idx < 6 ? 'eager' : 'lazy'}
+                        loading={idx < 2 ? 'eager' : 'lazy'}
                         decoding="async"
                         draggable={false}
                       />

@@ -38,9 +38,12 @@ export const sculptures = [ENTRANCE_SCULPTURE, ...rooms.map((_, i) => ({ x: 0, z
 /**
  * 30 piezas: 6 por cada una de las 5 salas (3 en el muro izquierdo y 3 en el muro derecho).
  */
+// Un contador por sala evita filtrar las 30 piezas por cada obra al construir el plano.
+// El orden, las coordenadas y los identificadores permanecen iguales.
+const nextPositionInRoom = new Map()
 export const exhibits = products.map((p) => {
-  const inRoom = products.filter((q) => q.room === p.room)
-  const k = inRoom.indexOf(p) // 0..5
+  const k = nextPositionInRoom.get(p.room) ?? 0 // 0..5
+  nextPositionInRoom.set(p.room, k + 1)
   const side = k % 2 === 0 ? -1 : 1
   const row = Math.floor(k / 2) // 0, 1, 2
   const z = roomCenter(p.room) + (1 - row) * 4.6
