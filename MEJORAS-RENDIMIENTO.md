@@ -1,8 +1,4 @@
-# VESTIGIO — Optimización de rendimiento conservadora
-
-La optimización se aplicó sobre el proyecto entregado, respetando el catálogo de 30 piezas,
-la información del mercado de sneakers, el carrito, la navegación, las animaciones existentes,
-los racks y el museo interactivo en 3D.
+# VESTIGIO — Optimización de rendimiento 
 
 ## Cambios realizados
 
@@ -36,4 +32,3 @@ node --test tests/performance-regression.mjs
 npm run dev
 ```
 
-Para una comparación reproducible de FPS y transferencia, utilizar Chrome DevTools (Performance y Network) con igual hardware, resolución, calidad, caché y escenas antes/después.
