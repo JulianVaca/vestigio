@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { EYE, START, stations, findPath, pathLength, pointOnPath, walkable, roomAt, wrapAngle, HALL } from './layout.js'
+import { getLookDelta } from './lookControls.js'
 
 /**
  * Cámara en primera persona del museo.
@@ -23,7 +24,7 @@ const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v))
 const MOVE_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 
-export default function Rig({ controllerRef, started, reduced, onRoomChange, onArrive, onUserInteract, minimapRef }) {
+export default function Rig({ controllerRef, started, reduced, invertedLook, onRoomChange, onArrive, onUserInteract, minimapRef }) {
   const { camera, gl } = useThree()
   const s = useRef({
     x: START.x,
@@ -47,7 +48,7 @@ export default function Rig({ controllerRef, started, reduced, onRoomChange, onA
     walked: 0,
   })
   const props = useRef({})
-  props.current = { started, reduced, onRoomChange, onArrive, onUserInteract }
+  props.current = { started, reduced, invertedLook, onRoomChange, onArrive, onUserInteract }
 
   useEffect(() => {
     camera.rotation.order = 'YXZ'
@@ -112,8 +113,9 @@ export default function Rig({ controllerRef, started, reduced, onRoomChange, onA
       st.dragDist += Math.abs(dx) + Math.abs(dy)
       if (st.dragDist < 4) return
       const k = e.pointerType === 'touch' ? 0.006 : 0.0042
-      st.yaw += dx * k
-      st.pitch = clamp(st.pitch + dy * k * 0.8, -0.6, 0.6)
+      const { yaw, pitch } = getLookDelta(dx, dy, k, props.current.invertedLook)
+      st.yaw += yaw
+      st.pitch = clamp(st.pitch + pitch, -0.6, 0.6)
       st.targetYaw = st.targetPitch = null
       st.travelLook = false
       props.current.onUserInteract?.()
