@@ -8,6 +8,7 @@ import { OliveBranch } from '../components/Ornaments.jsx'
 import { ArrowIcon, CubeIcon } from '../components/Icons.jsx'
 import { useScrollAnimations, onFirstInteraction } from '../hooks/useScrollAnimations.js'
 import { useMotionPref } from '../context/MotionContext.jsx'
+import '../styles/home.css'
 
 const HERO_PIECES = ['bbc-icecream-varsity', 'offwhite-caravaggio-varsity', 'bape-m65-laurel', 'raf-riot-bomber'].map(
   getProduct,
@@ -132,19 +133,104 @@ function HeroColonnade({ reduced }) {
   )
 }
 
-const featured = [
-  products[0],
-  products[6],
-  products[12],
-  products[18],
-  products[24],
-  products[26],
-  products[27],
-  products[28],
+// Portada compacta: una fila de prendas (una por sala de ropa) y otra de sneakers, en pestañas.
+const featuredGarments = [0, 6, 12, 18].map((i) => products[i])
+const featuredSneakers = sneakers.slice(0, 4)
+const FEATURED_TABS = [
+  { id: 'prendas', label: 'Prendas', to: '/catalogo', cta: 'Ver las 30 prendas' },
+  { id: 'sneakers', label: 'Sneakers', to: '/sneakers', cta: 'Ver el mercado completo' },
 ]
 // En el perchero de portada cuelgan ocho prendas, dos por sala de ropa.
 const rackPieces = [0, 3, 6, 9, 12, 15, 18, 21].map((i) => products[i])
 const corridorFrames = [products[0], products[6], products[12], products[18], products[24], products[27]]
+
+/** Piezas destacadas en pestañas: lo mismo que antes ocupaba dos secciones, en una sola fila. */
+function Featured() {
+  const [tab, setTab] = useState('prendas')
+  const current = FEATURED_TABS.find((t) => t.id === tab)
+
+  const onKeyDown = (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
+    e.preventDefault()
+    const next = tab === 'prendas' ? 'sneakers' : 'prendas'
+    setTab(next)
+    document.getElementById(`featured-tab-${next}`)?.focus()
+  }
+
+  return (
+    <section className="section section--tight container" aria-labelledby="featured-title">
+      <div className="section__head featured__head" data-reveal>
+        <div>
+          <p className="eyebrow">Selección de las 5 Salas</p>
+          <h2 id="featured-title" className="h2">
+            Piezas <em>destacadas</em>
+          </h2>
+        </div>
+        <div className="featured__nav">
+          <div className="chips" role="tablist" aria-label="Tipo de pieza destacada" onKeyDown={onKeyDown}>
+            {FEATURED_TABS.map((t) => (
+              <button
+                key={t.id}
+                id={`featured-tab-${t.id}`}
+                type="button"
+                role="tab"
+                className={`chip ${t.id === tab ? 'chip--active' : ''}`}
+                aria-selected={t.id === tab}
+                aria-controls="featured-panel"
+                tabIndex={t.id === tab ? 0 : -1}
+                onClick={() => setTab(t.id)}
+              >
+                {t.id === tab && <span className="chip__bg" />}
+                <span className="chip__label">{t.label}</span>
+              </button>
+            ))}
+          </div>
+          <Link to={current.to} className="link-arrow">
+            {current.cta} <ArrowIcon width={18} height={18} />
+          </Link>
+        </div>
+      </div>
+
+      <div id="featured-panel" role="tabpanel" aria-labelledby={`featured-tab-${tab}`} data-reveal>
+        {tab === 'prendas' ? (
+          <div className="grid grid--4 featured__row">
+            {featuredGarments.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        ) : (
+          <ul className="grid grid--4 featured__row">
+            {featuredSneakers.map((s) => {
+              const m = getMarket(s)
+              return (
+                <li key={s.id}>
+                  <Link to={`/sneakers/${s.id}`} className="mtile">
+                    <span className="mtile__media">
+                      <img
+                        src={s.img.replace('.webp', '-sm.webp')}
+                        alt=""
+                        width="420"
+                        height="560"
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    </span>
+                    <span className="mtile__name">{s.name}</span>
+                    <span className="mtile__label">Precio más bajo</span>
+                    <span className="mtile__price">{formatPrice(m.lowestAsk)}</span>
+                    <span className={`mtile__change ${m.change >= 0 ? 'is-up' : 'is-down'}`}>
+                      {m.change >= 0 ? '▲' : '▼'} {formatPct(m.change)} esta semana
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
+    </section>
+  )
+}
 
 export default function Home() {
   const scope = useRef(null)
@@ -152,7 +238,7 @@ export default function Home() {
   useScrollAnimations(scope)
 
   return (
-    <main id="main" ref={scope}>
+    <main id="main" ref={scope} className="home">
       {/* ───────────── HERO «ATRIO ÁUREO»: nicho en arco con la prenda destacada ───────────── */}
       <section className="hero atrium" aria-labelledby="hero-title">
         <div className="atrium__bg" aria-hidden="true" />
@@ -218,13 +304,14 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ───────────── MANIFIESTO ───────────── */}
-      <section className="manifesto container" aria-label="Manifiesto" data-reveal>
+      {/* ───────────── MANIFIESTO (compacto) ───────────── */}
+      <section className="manifesto manifesto--compact container" aria-label="Manifiesto" data-reveal>
         <p className="eyebrow">Manifiesto del Atelier</p>
         <p className="manifesto__text">
-          No seguimos tendencias efímeras; esculpimos prendas originales que perduran como la piedra. En VESTIGIO cada
-          pieza nace desde cero en nuestro atelier dialogando con la arquitectura griega de travertino, el bronce
-          cepillado y la vida botánica del Mediterráneo.
+          No seguimos tendencias efímeras; esculpimos prendas originales que perduran como la piedra.
+        </p>
+        <p className="manifesto__note">
+          Cada pieza nace desde cero en nuestro atelier, entre travertino, bronce cepillado y botánica mediterránea.
         </p>
       </section>
 
@@ -237,72 +324,11 @@ export default function Home() {
         />
       </div>
 
-      {/* ───────────── DESTACADOS ───────────── */}
-      <section className="section container" aria-labelledby="featured-title">
-        <div className="section__head" data-reveal>
-          <div>
-            <p className="eyebrow">Selección de las 5 Salas</p>
-            <h2 id="featured-title" className="h2">
-              Piezas <em>destacadas</em>
-            </h2>
-          </div>
-          <Link to="/catalogo" className="link-arrow">
-            Ver las 30 prendas en racks <ArrowIcon width={18} height={18} />
-          </Link>
-        </div>
-        <div className="grid grid--4" data-reveal-stagger>
-          {featured.map((p, idx) => (
-            <ProductCard key={p.id} product={p} priority={idx < 4} />
-          ))}
-        </div>
-      </section>
+      {/* ───────────── DESTACADOS: prendas y sneakers en pestañas ───────────── */}
+      <Featured />
 
-      {/* ───────────── MERCADO DE SNEAKERS (teaser) ───────────── */}
-      <section className="market-teaser" aria-labelledby="market-title">
-        <div className="container">
-          <div className="section__head" data-reveal>
-            <div>
-              <p className="eyebrow eyebrow--light">Mercado Pedestal · Autenticidad verificada</p>
-              <h2 id="market-title" className="h2">
-                Sneakers con <em>precio de mercado</em>
-              </h2>
-            </div>
-            <Link to="/sneakers" className="link-arrow link-arrow--light">
-              Ver el mercado completo <ArrowIcon width={18} height={18} />
-            </Link>
-          </div>
-          <ul className="market-teaser__list" data-reveal-stagger>
-            {sneakers.slice(0, 3).map((s) => {
-              const m = getMarket(s)
-              return (
-                <li key={s.id}>
-                  <Link to={`/sneakers/${s.id}`} className="mtile mtile--dark">
-                    <span className="mtile__media">
-                      <img
-                        src={s.img.replace('.webp', '-sm.webp')}
-                        alt=""
-                        width="420"
-                        height="560"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </span>
-                    <span className="mtile__name">{s.name}</span>
-                    <span className="mtile__label">Precio más bajo</span>
-                    <span className="mtile__price">{formatPrice(m.lowestAsk)}</span>
-                    <span className={`mtile__change ${m.change >= 0 ? 'is-up' : 'is-down'}`}>
-                      {m.change >= 0 ? '▲' : '▼'} {formatPct(m.change)} esta semana
-                    </span>
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      </section>
-
-      {/* ───────────── TEASER MUSEO, SALAS Y CTA ───────────── */}
-      <section className="teaser" aria-labelledby="teaser-title">
+      {/* ───────────── MUSEO 3D + SALAS ───────────── */}
+      <section className="teaser teaser--compact" aria-labelledby="teaser-title">
         <div className="corridor" aria-hidden="true">
           <div className="corridor__track" style={{ transform: 'translate3d(0, 0, 260px)' }}>
             {corridorFrames.map((p, i) => (
@@ -324,66 +350,38 @@ export default function Home() {
           </div>
         </div>
         <div className="teaser__content container" data-reveal>
-          <p className="eyebrow">Flagship 3D · Racks de Bronce, Travertino & Olivos</p>
+          <p className="eyebrow">Flagship 3D · Cinco salas</p>
           <h2 id="teaser-title" className="h2">
             Recorre los <em>racks en 3D</em>
           </h2>
           <p className="teaser__text">
-            Cinco salas luminosas en piedra travertino y granito griego donde las 30 prendas cuelgan de racks arquitectónicos de
-            bronce. Acércate a cualquier perchero, pasa de una prenda a otra y añade tu talla al carrito.
+            Las 30 prendas cuelgan de racks de bronce en cinco salas de travertino. Elige una sala y entra directo.
           </p>
           <Link to="/museo" className="btn btn--primary">
             <CubeIcon width={18} height={18} /> Entrar a la tienda-museo 3D
           </Link>
-        </div>
-      </section>
-
-      {/* ───────────── SALAS ───────────── */}
-      <section className="section container" aria-labelledby="rooms-title">
-        <div className="section__head" data-reveal>
-          <div>
-            <p className="eyebrow">Plano del showroom · 30 prendas originales</p>
-            <h2 id="rooms-title" className="h2">
-              Cinco <em>salas</em>
-            </h2>
-          </div>
-        </div>
-        <ol className="rooms" data-reveal-stagger>
-          {rooms.map((r) => {
-            const items = products.filter((p) => p.room === r.id)
-            return (
-              <li key={r.id} className="rooms__item">
-                <Link to={`/museo?sala=${r.id}`} className="rooms__link">
-                  <span className="rooms__num">0{r.id + 1}</span>
-                  <span className="rooms__name">{r.name.split('·')[1]}</span>
-                  <span className="rooms__text">{r.text}</span>
-                  <span className="rooms__thumbs" aria-hidden="true">
-                    {items.slice(0, 3).map((p) => (
-                      <img
-                        key={p.id}
-                        src={p.img.replace('.webp', '-sm.webp')}
-                        alt=""
-                        loading="lazy"
-                        decoding="async"
-                        width="420"
-                        height="560"
-                      />
-                    ))}
-                  </span>
-                  <ArrowIcon className="rooms__arrow" />
+          <ol className="room-chips" aria-label="Salas del museo">
+            {rooms.map((r) => (
+              <li key={r.id}>
+                <Link to={`/museo?sala=${r.id}`} className="room-chip" title={r.text}>
+                  <span className="room-chip__num">0{r.id + 1}</span>
+                  <span className="room-chip__name">{r.name.split('·')[1]}</span>
+                  <ArrowIcon className="room-chip__arrow" width={16} height={16} />
                 </Link>
               </li>
-            )
-          })}
-        </ol>
+            ))}
+          </ol>
+        </div>
       </section>
 
-      {/* ───────────── CTA ───────────── */}
-      <section className="cta container" data-reveal>
-        <h2 className="h2">
-          ¿Buscas asesoría de <em>talla o estilo</em>?
-        </h2>
-        <p>Agenda una cita personalizada con nuestro equipo de sastrería urbana o solicita información sobre envíos asegurados.</p>
+      {/* ───────────── CTA (compacto) ───────────── */}
+      <section className="cta cta--compact container" data-reveal>
+        <div>
+          <h2 className="h2">
+            ¿Buscas asesoría de <em>talla o estilo</em>?
+          </h2>
+          <p>Agenda una cita con nuestra sastrería urbana o consulta por envíos asegurados.</p>
+        </div>
         <Link to="/contacto" className="btn btn--ghost">
           Contactar al atelier <ArrowIcon width={18} height={18} />
         </Link>

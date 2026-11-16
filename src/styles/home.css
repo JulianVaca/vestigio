@@ -1,0 +1,204 @@
+/* ==========================================================================
+   Portada compacta
+   La misma información en la mitad de recorrido: manifiesto en una franja,
+   destacados y sneakers en pestañas, museo y salas en un solo bloque.
+   Todo cuelga de `.home` para no tocar el resto de páginas.
+   ========================================================================== */
+
+/* ---------- Manifiesto: una frase y una nota ---------- */
+.home .manifesto--compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  align-items: end;
+  gap: 0.5rem clamp(1.5rem, 5vw, 4rem);
+  padding-block: clamp(2.5rem, 5vw, 3.75rem) clamp(1rem, 2vw, 1.5rem);
+}
+.home .manifesto--compact .eyebrow {
+  grid-column: 1 / -1;
+  margin-bottom: 0.25rem;
+}
+.home .manifesto--compact .manifesto__text {
+  font-size: clamp(1.45rem, 2.7vw, 2.3rem);
+  line-height: 1.18;
+  max-width: 30ch;
+}
+.home .manifesto__note {
+  max-width: 34ch;
+  padding-bottom: 0.3rem;
+  color: var(--c-muted);
+  font-size: 0.95rem;
+}
+
+.home .vrack {
+  margin: 1.25rem 0 0;
+}
+
+/* ---------- Destacados en pestañas ---------- */
+.home .section--tight {
+  padding-block: clamp(2.75rem, 5.5vw, 4.25rem);
+}
+.home .featured__head {
+  margin-bottom: clamp(1.25rem, 2.5vw, 2rem);
+}
+.featured__nav {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.9rem 1.5rem;
+}
+.home .featured__row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.home .featured__row .mtile__media {
+  aspect-ratio: 3 / 4;
+}
+
+/* ---------- Museo 3D + salas en un bloque ---------- */
+.home .teaser--compact {
+  min-height: 0;
+  padding-block: clamp(3.5rem, 7vw, 5.5rem);
+}
+.home .teaser--compact .teaser__text {
+  margin: 1rem 0 1.5rem;
+}
+.home .teaser__content > .room-chips {
+  max-width: none;
+}
+.room-chips {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: clamp(2rem, 4vw, 3rem);
+}
+.room-chip {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 60px;
+  padding: 0.6rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(184, 150, 79, 0.4);
+  background: rgba(245, 241, 232, 0.92);
+  transition:
+    border-color 0.3s,
+    background-color 0.3s,
+    transform 0.4s var(--ease-out);
+}
+.room-chip:hover {
+  border-color: var(--c-gold-500);
+  background: #fbf8f1;
+  transform: translateY(-2px);
+}
+.room-chip__num {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--c-gold);
+  font-variant-numeric: tabular-nums;
+}
+.room-chip__name {
+  font-family: var(--f-display);
+  font-style: italic;
+  font-size: 1.08rem;
+  line-height: 1.15;
+}
+.room-chip__arrow {
+  color: var(--c-muted);
+  transition:
+    transform 0.4s var(--ease-out),
+    color 0.3s;
+}
+.room-chip:hover .room-chip__arrow {
+  transform: translateX(3px);
+  color: var(--c-accent);
+}
+
+/* ---------- CTA en una franja ---------- */
+.home .cta--compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem 2rem;
+  padding-block: clamp(2.5rem, 5vw, 3.5rem);
+  text-align: left;
+}
+.home .cta--compact .h2 {
+  font-size: clamp(1.6rem, 2.8vw, 2.3rem);
+}
+.home .cta--compact p {
+  margin-top: 0.5rem;
+}
+
+@media (max-width: 1100px) {
+  .room-chips {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  .home .manifesto--compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Una fila que se desliza con el dedo en lugar de apilar tarjetas hacia abajo. */
+  .home .featured__row {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: min(62%, 260px);
+    gap: 0.9rem;
+    margin-inline: calc(var(--gutter) * -1);
+    padding: 0 var(--gutter) 0.75rem;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: var(--gutter);
+    scrollbar-width: none;
+  }
+  .home .featured__row::-webkit-scrollbar {
+    display: none;
+  }
+  .home .featured__row > * {
+    scroll-snap-align: start;
+  }
+  .home .teaser--compact {
+    align-items: center;
+    padding-bottom: clamp(3rem, 8vw, 4rem);
+  }
+  /* En pantallas estrechas el corredor queda detrás del texto: se atenúa para que se lea. */
+  .home .teaser--compact .corridor {
+    opacity: 0.22;
+  }
+}
+
+@media (max-width: 640px) {
+  .room-chips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .room-chip {
+    min-height: 52px;
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+  }
+  .room-chip__name {
+    font-size: 0.98rem;
+  }
+  .home .cta--compact .btn {
+    width: 100%;
+  }
+  /* La ficha del perchero conserva nombre, precio, talla y compra; la descripción vive en «Ver detalle». */
+  .home .vrack__desc,
+  .home .vrack__subtitle {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-chip,
+  .room-chip__arrow {
+    transition: none;
+  }
+}
+html[data-reduced-motion='true'] .room-chip,
+html[data-reduced-motion='true'] .room-chip__arrow {
+  transition: none;
+}
