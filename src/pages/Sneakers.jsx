@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { formatPrice } from '../data/products.js'
 import { sneakers, getMarket, formatPct } from '../data/market.js'
 import { VerifiedSeal, OliveBranch } from '../components/Ornaments.jsx'
+import SneakerPedestal from '../components/SneakerPedestal.jsx'
 import { useScrollAnimations } from '../hooks/useScrollAnimations.js'
 
 const SIZES = ['EU 40', 'EU 41', 'EU 42', 'EU 43', 'EU 44']
@@ -69,6 +70,13 @@ export default function Sneakers() {
       </section>
 
       <div className="container">
+        {/* Vitrina 3D: los seis modelos en pedestales, como el perchero 3D de las prendas. */}
+        <SneakerPedestal
+          items={sneakers}
+          title="Vitrina 3D · 6 Modelos en Pedestal"
+          subtitle="Gira la vitrina arrastrando o con las flechas. Con el cursor sobre el par del frente lo ves en volumen."
+        />
+
         <div className="market__toolbar">
           <div className="chips" role="group" aria-label="Silueta">
             {['Todos', 'Caña alta', 'Caña baja'].map((c) => (

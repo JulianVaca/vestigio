@@ -1,0 +1,187 @@
+/* ==========================================================================
+   Vitrina 3D de sneakers (WebGL) — reutiliza el marco del perchero (.vrack)
+   La fila de miniaturas sigue en el DOM para teclado y lectores de pantalla; con la
+   escena 3D activa sólo deja de verse.
+   ========================================================================== */
+.pstage {
+  margin: 0 0 2.5rem;
+}
+.pstage__stage {
+  height: calc(var(--stage-h) + 20px);
+}
+
+.ped3d {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease-out);
+}
+.pstage__stage.is-3d .ped3d {
+  opacity: 1;
+}
+.ped3d.is-hover {
+  cursor: pointer;
+}
+.ped3d.is-dragging {
+  cursor: grabbing;
+}
+.ped3d canvas {
+  display: block;
+}
+
+/* ---------- Fila clásica: respaldo sin WebGL / movimiento reducido ---------- */
+.pstage__rail {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: safe center;
+  gap: clamp(0.5rem, 2vw, 1.5rem);
+  height: 100%;
+  margin: 0;
+  padding: 0 var(--pad) 34px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  transition: opacity 0.4s;
+}
+.pstage__rail::-webkit-scrollbar {
+  display: none;
+}
+.pstage__rail li {
+  flex: 0 0 auto;
+}
+.pstage__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: clamp(112px, 12vw, 158px);
+  cursor: pointer;
+  outline: none;
+  opacity: 0.72;
+  transform-origin: 50% 100%;
+  transition:
+    opacity 0.3s,
+    transform 0.45s var(--ease-out);
+}
+.pstage__item:hover,
+.pstage__item.is-active {
+  opacity: 1;
+}
+.pstage__item.is-active {
+  transform: scale(1.14);
+}
+.pstage__item img {
+  width: 100%;
+  height: 132px;
+  object-fit: contain;
+  object-position: 50% 100%;
+  filter: drop-shadow(0 12px 10px rgba(15, 26, 20, 0.25));
+  pointer-events: none;
+  user-select: none;
+}
+.pstage__plinth {
+  width: 78%;
+  height: 74px;
+  margin-top: 10px;
+  border-radius: 4px 4px 2px 2px;
+  border-top: 3px solid #f6f0e2;
+  background:
+    repeating-linear-gradient(90deg, rgba(120, 100, 70, 0.16) 0 2px, rgba(255, 250, 238, 0.2) 2px 12px),
+    linear-gradient(180deg, #ebe1cc, #d6cab1);
+  box-shadow: 0 14px 18px -12px rgba(15, 26, 20, 0.45);
+}
+.pstage__item.is-active .pstage__plinth {
+  border-top-color: var(--c-gold-500);
+}
+.pstage__item:focus-visible img {
+  outline: 2px solid var(--c-gold-500);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+.pstage__stage.is-3d .pstage__rail {
+  opacity: 0;
+  pointer-events: none;
+}
+/* El foco de teclado vive en la fila oculta: el escenario lo hace visible. */
+.pstage__stage.is-3d:has(.pstage__item:focus-visible) {
+  outline: 2px solid var(--c-gold-500);
+  outline-offset: -6px;
+  border-radius: 14px;
+}
+
+/* ---------- Ficha de mercado del par que se mira ---------- */
+.pstage__info {
+  align-items: center;
+  animation: pstage-in 0.3s var(--ease-out);
+}
+@keyframes pstage-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+.pstage__stats {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  justify-content: start;
+  gap: 0.5rem clamp(1.25rem, 3vw, 2.5rem);
+}
+.pstage__stats dt {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--c-muted);
+}
+.pstage__stats dt,
+.pstage__stats dd {
+  white-space: nowrap;
+}
+.pstage__stats dd {
+  margin-top: 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.pstage__stats .pstage__price {
+  font-family: var(--f-display);
+  font-size: 1.6rem;
+  font-weight: 500;
+  line-height: 1.1;
+  color: var(--c-gold);
+}
+
+@media (max-width: 640px) {
+  .pstage__stage {
+    height: var(--stage-h);
+  }
+  .pstage__item {
+    width: 112px;
+  }
+  .pstage__item img {
+    height: 100px;
+  }
+  .pstage__stats .pstage__price {
+    font-size: 1.35rem;
+  }
+  .pstage__stats {
+    gap: 0.5rem 1rem;
+  }
+  .pstage__stats dt {
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+  }
+}
+
+html[data-reduced-motion='true'] .pstage__item,
+html[data-reduced-motion='true'] .pstage__rail {
+  transition: none;
+}
+html[data-reduced-motion='true'] .pstage__info {
+  animation: none;
+}
