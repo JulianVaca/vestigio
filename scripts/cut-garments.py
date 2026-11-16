@@ -6,6 +6,8 @@ También escribe `src/rack3d/cuts.json` con el encuadre de cada prenda dentro de
 
 Uso:  python scripts/cut-garments.py            (todas las piezas)
       python scripts/cut-garments.py --sheet x.png   (además guarda una hoja de contacto para revisar)
+      python scripts/cut-garments.py --only sneaker-dunk-pigeon,sneaker-offwhite-aj1
+                                                     (sólo esas piezas; el resto del manifiesto se conserva)
 Requiere: opencv-python, numpy, pillow.
 """
 import glob
@@ -21,8 +23,17 @@ SRC = os.path.join(os.path.dirname(__file__), '..', 'public', 'img', 'products')
 MANIFEST = os.path.join(os.path.dirname(__file__), '..', 'src', 'rack3d', 'cuts.json')
 WIDTH = 560
 
+# Calzado fotografiado apoyado en el suelo: su sombra toca la suela y GrabCut la toma por zapato.
+# Para estas piezas se marca la línea de apoyo (puntos x, y sobre la foto a 560 px de ancho):
+# todo lo que queda por debajo (o detrás del talón) es suelo seguro. El pedestal 3D necesita el zapato sin su sombra.
+GROUND = {
+    'sneaker-yeezy-700-waverunner': [(0, 440), (42, 452), (68, 480), (130, 486), (480, 482), (506, 473), (526, 440), (560, 430)],
+    'sneaker-offwhite-aj1': [(0, 225), (76, 238), (66, 320), (60, 362), (57, 440), (58, 470), (62, 483), (430, 484), (462, 478), (510, 464), (524, 445), (560, 435)],
+    'sneaker-dunk-pigeon': [(0, 290), (66, 312), (58, 345), (52, 400), (49, 464), (56, 482), (440, 482), (482, 476), (516, 464), (532, 445), (560, 435)],
+}
 
-def cut(path):
+
+def cut(path, ground=None):
     rgb = np.array(Image.open(path).convert('RGB'))
     h0, w0 = rgb.shape[:2]
     h = round(h0 * WIDTH / w0)
@@ -39,6 +50,10 @@ def cut(path):
     fgd = np.zeros((1, 65), np.float64)
     cv2.grabCut(cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB), mask, None, bgd, fgd, 6, cv2.GC_INIT_WITH_MASK)
     fg = ((mask == cv2.GC_FGD) | (mask == cv2.GC_PR_FGD)).astype(np.uint8)
+    if ground:
+        # La sombra se recorta después de GrabCut: marcarla antes como fondo le enseña que el fondo
+        # es oscuro y entonces toma la pared clara por zapato.
+        cv2.fillPoly(fg, [np.array(ground + [(w, h), (0, h)], np.int32)], 0)
 
     # Sólo la pieza principal, sin huecos interiores.
     n, lbl, stats, _ = cv2.connectedComponentsWithStats(fg, 8)
@@ -77,12 +92,18 @@ def cut(path):
 
 def main():
     sheet = sys.argv[sys.argv.index('--sheet') + 1] if '--sheet' in sys.argv else None
+    only = sys.argv[sys.argv.index('--only') + 1].split(',') if '--only' in sys.argv else None
     files = sorted(f for f in glob.glob(os.path.join(SRC, '*.webp')) if not f.endswith(('-sm.webp', '-cut.webp')))
     thumbs = []
     boxes = {}
+    if only:
+        files = [f for f in files if os.path.basename(f)[:-5] in only]
+        with open(MANIFEST, encoding='utf-8') as fh:
+            boxes = json.load(fh)
     for f in files:
-        rgba, box = cut(f)
-        boxes[os.path.basename(f)[:-5]] = box
+        name = os.path.basename(f)[:-5]
+        rgba, box = cut(f, GROUND.get(name))
+        boxes[name] = box
         out = f[:-5] + '-cut.webp'
         # exact=True conserva el color bajo los píxeles transparentes (el sangrado de arriba).
         Image.fromarray(rgba).save(out, 'WEBP', quality=82, method=6, exact=True)
@@ -96,10 +117,11 @@ def main():
             canvas[: t.shape[0], : t.shape[1]] = t
             thumbs.append(canvas)
     with open(MANIFEST, 'w', encoding='utf-8', newline=chr(10)) as fh:
-        json.dump(boxes, fh, indent=2)
+        json.dump(dict(sorted(boxes.items())), fh, indent=2)
         fh.write(chr(10))
     if sheet:
-        rows = [np.hstack(thumbs[i:i + 10]) for i in range(0, len(thumbs), 10) if len(thumbs[i:i + 10]) == 10]
+        per = min(10, len(thumbs))
+        rows = [np.hstack(thumbs[i:i + per]) for i in range(0, len(thumbs), per) if len(thumbs[i:i + per]) == per]
         Image.fromarray(np.vstack(rows)).save(sheet)
 
 
