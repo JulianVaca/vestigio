@@ -5,25 +5,13 @@ import { formatPrice, rooms } from '../data/products.js'
 import { useCart } from '../context/CartContext.jsx'
 import { useMotionPref } from '../context/MotionContext.jsx'
 import { flyToCart } from '../lib/flyToCart.js'
+import { hasWebGL } from '../lib/webgl.js'
 import SizeSelector from './SizeSelector.jsx'
 import { ArrowIcon, ArrowLeftIcon, CheckIcon, CubeIcon, PlusIcon } from './Icons.jsx'
 import '../styles/rack3d.css'
 
 // Three.js sólo se descarga cuando un perchero se acerca a la pantalla.
 const Rack3D = lazy(() => import('../rack3d/Rack3D.jsx'))
-
-let webglOk = null
-function hasWebGL() {
-  if (webglOk === null) {
-    try {
-      const c = document.createElement('canvas')
-      webglOk = Boolean(c.getContext('webgl2') || c.getContext('webgl'))
-    } catch {
-      webglOk = false
-    }
-  }
-  return webglOk
-}
 
 /** Percha de bronce dorado: trazos directos (sin url(#id) cross-tree) para composición GPU instantánea en 3D. */
 const Hanger = memo(function Hanger() {

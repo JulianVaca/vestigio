@@ -1,5 +1,27 @@
 # Registro de Cambios (Changelog) — VESTIGIO
 
+## [2.5.0] — Portada compacta y vitrina 3D de sneakers (2026-11-16)
+
+### Portada con la mitad de recorrido (`src/pages/Home.jsx`, `src/styles/home.css`)
+Comentario del cliente: demasiada información en el inicio y demasiado scroll para verla.
+
+| Ancho | Antes | Después |
+|---|---|---|
+| Escritorio (1440) | 7.796 px | **4.077 px** (−48 %) |
+| Móvil (390) | 8.702 px | **5.221 px** (−40 %) |
+
+- **Manifiesto** en una franja: una frase y una nota (antes un párrafo a pantalla completa).
+- **Piezas destacadas y mercado de sneakers** en una sola sección con pestañas «Prendas / Sneakers», una fila de cuatro. En móvil la fila se desliza con el dedo en lugar de apilarse.
+- **Museo 3D y las cinco salas** en un solo bloque: el corredor conserva su botón y las salas pasan a ser cinco accesos directos (`/museo?sala=`).
+- **Asesoría** en una franja de una línea.
+- El hero, la marquesina y el perchero 3D no cambian. En móvil la ficha del perchero de portada omite la descripción larga (sigue en «Ver detalle»).
+
+### Vitrina 3D en Sneakers (`src/components/SneakerPedestal.jsx`, `src/rack3d/Pedestal3D.jsx`)
+- Los seis modelos sobre pedestales de travertino en un carrusel que gira con inercia al arrastrar (ratón, dedo, trackpad o flechas). El par del frente se levanta y sigue al cursor para dejar ver su volumen; debajo, su ficha de mercado (precio más bajo, variación semanal, vendidos).
+- Misma técnica y mismas reglas que el perchero: recortes con alfa de las fotos del catálogo con grosor, `frameloop="demand"` (GPU en reposo cuando nada se mueve), Three.js sólo se descarga al acercarse a la pantalla y la escena se libera al alejarse.
+- Con movimiento reducido o sin WebGL se muestra una fila de pedestales en CSS; esa misma fila da el acceso por teclado y lector de pantalla.
+- `scripts/cut-garments.py`: línea de apoyo para el calzado fotografiado sobre el suelo (su sombra salía pegada al recorte) y opción `--only` para regenerar piezas sueltas. Se regeneraron tres recortes de sneakers; el resto no cambia.
+
 ## [2.4.0] — Museo sin bloqueo al cargar, animaciones de scroll restauradas (2026-11-07)
 
 Lighthouse escritorio (build de producción):
