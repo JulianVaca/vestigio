@@ -49,6 +49,13 @@ export const ArrowLeftIcon = (p) => (
     <path d="M20 12H4M10 6l-6 6 6 6" />
   </svg>
 )
+// Dirección de la mirada: mismo trazo y proporción que los controles del recorrido 3D.
+export const LookModeIcon = (p) => (
+  <svg {...base} {...p}>
+    <path d="M3 8h18m-5-4 5 4-5 4M21 16H3m5-4-5 4 5 4" />
+  </svg>
+)
+
 export const PlusIcon = (p) => (
   <svg {...base} {...p}>
     <path d="M12 5v14M5 12h14" />

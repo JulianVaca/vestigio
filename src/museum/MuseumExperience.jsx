@@ -10,7 +10,7 @@ import { stations, HALL, dividers, exhibits, sculptures, DOOR_HALF } from './lay
 import { rooms, getProduct, formatPrice } from '../data/products.js'
 import { useCart } from '../context/CartContext.jsx'
 import { flyToCart } from '../lib/flyToCart.js'
-import { ArrowIcon, ArrowLeftIcon, CloseIcon, PlayIcon, PauseIcon, PlusIcon, CheckIcon } from '../components/Icons.jsx'
+import { ArrowIcon, ArrowLeftIcon, CloseIcon, PlayIcon, PauseIcon, PlusIcon, CheckIcon, LookModeIcon } from '../components/Icons.jsx'
 
 const AUTOPLAY_MS = 6500
 
@@ -123,6 +123,7 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
   const [selected, setSelected] = useState(null)
   const [autoplay, setAutoplay] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [invertedLook, setInvertedLook] = useState(false) // Normal por defecto, sólo en este recorrido
   const [quality] = useState(detectQuality)
   const { lowPower } = quality
   const [isPortrait] = useState(() => typeof window !== 'undefined' && window.innerWidth < window.innerHeight)
@@ -276,6 +277,7 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
           controllerRef={controller}
           started={started}
           reduced={reduced}
+          invertedLook={invertedLook}
           onRoomChange={setRoom}
           onArrive={onArrive}
           onUserInteract={onUserInteract}
@@ -363,6 +365,17 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
               {autoplay ? <PauseIcon /> : <PlayIcon />}
             </button>
             <button
+              type="button"
+              className={`icon-btn tour__look-mode ${invertedLook ? 'is-on' : ''}`}
+              onClick={() => setInvertedLook((value) => !value)}
+              aria-pressed={invertedLook}
+              aria-label={`Controles ${invertedLook ? 'invertidos' : 'normales'}. Cambiar a ${invertedLook ? 'normal' : 'invertido'}`}
+              title={`Controles: ${invertedLook ? 'invertidos' : 'normales'} · Cambiar modo`}
+            >
+              <LookModeIcon />
+              <span className="tour__look-label">{invertedLook ? 'Invertido' : 'Normal'}</span>
+            </button>
+            <button
               className="icon-btn tour__help"
               onClick={() => setShowHelp((v) => !v)}
               aria-expanded={showHelp}
@@ -382,7 +395,10 @@ export default function MuseumExperience({ reduced, initialStation = 0, initialP
               >
                 <ul className="museum__keys">
                   <li>
-                    <kbd>Arrastrar</kbd> mirar alrededor
+                    <kbd>Arrastrar</kbd> mirar alrededor ({invertedLook ? 'invertido' : 'normal'})
+                  </li>
+                  <li>
+                    <kbd>Normal / Invertido</kbd> cambia la dirección de la mirada al arrastrar
                   </li>
                   <li>
                     <kbd>Clic</kbd> piso: caminar · rack: ver prenda y talla

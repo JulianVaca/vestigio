@@ -6,6 +6,8 @@ import { VerifiedSeal, OliveBranch } from '../components/Ornaments.jsx'
 import { useScrollAnimations } from '../hooks/useScrollAnimations.js'
 
 const SIZES = ['EU 40', 'EU 41', 'EU 42', 'EU 43', 'EU 44']
+// getMarket está memoizado: calcular este valor una sola vez evita el trabajo en cada render.
+const totalSales = sneakers.reduce((s, p) => s + getMarket(p).sales, 0)
 const SORTS = {
   featured: { label: 'Destacados', fn: () => 0 },
   low: { label: 'Precio más bajo', fn: (a, b) => a.price - b.price },
@@ -35,8 +37,6 @@ export default function Sneakers() {
         return SORTS[sort].fn(a, b)
       })
   }, [silhouette, size, sort])
-
-  const totalSales = sneakers.reduce((s, p) => s + getMarket(p).sales, 0)
 
   return (
     <main id="main" ref={scope} className="market">

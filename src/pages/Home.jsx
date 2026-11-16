@@ -54,7 +54,10 @@ function HeroColonnade({ reduced }) {
 
   useEffect(() => {
     if (!armed || paused) return
-    const id = setInterval(() => setI((v) => (v + 1) % HERO_PIECES.length), HERO_MS)
+    // No cambies diapositivas fuera de pantalla: evita trabajo en pestañas ocultas.
+    const id = setInterval(() => {
+      if (document.visibilityState === 'visible') setI((v) => (v + 1) % HERO_PIECES.length)
+    }, HERO_MS)
     return () => clearInterval(id)
   }, [armed, paused])
 
